@@ -1,0 +1,573 @@
+{
+  "generated_at": "2025-11-11 19:24:57",
+  "transactions": [
+    {
+      "ticker": "VHVE.L",
+      "purchase_date": "2023-01-03",
+      "quantity": 7.0,
+      "purchase_price": 75.0,
+      "transaction_fees": 1.0
+    },
+    {
+      "ticker": "AAPL",
+      "purchase_date": "2023-11-03",
+      "quantity": 10.0,
+      "purchase_price": 170.0,
+      "transaction_fees": 1.0
+    }
+  ],
+  "portfolio_values": [
+    {
+      "date": "2023-02-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 80.49,
+          "value": 563.43
+        }
+      ],
+      "total_value": 563.43
+    },
+    {
+      "date": "2023-03-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 78.3,
+          "value": 548.1
+        }
+      ],
+      "total_value": 548.1
+    },
+    {
+      "date": "2023-04-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 78.42,
+          "value": 548.91
+        }
+      ],
+      "total_value": 548.91
+    },
+    {
+      "date": "2023-05-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 81.25,
+          "value": 568.75
+        }
+      ],
+      "total_value": 568.75
+    },
+    {
+      "date": "2023-06-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 82.46,
+          "value": 577.19
+        }
+      ],
+      "total_value": 577.19
+    },
+    {
+      "date": "2023-07-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 84.83,
+          "value": 593.81
+        }
+      ],
+      "total_value": 593.81
+    },
+    {
+      "date": "2023-08-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 88.77,
+          "value": 621.39
+        }
+      ],
+      "total_value": 621.39
+    },
+    {
+      "date": "2023-09-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 87.38,
+          "value": 611.62
+        }
+      ],
+      "total_value": 611.62
+    },
+    {
+      "date": "2023-10-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 83.42,
+          "value": 583.94
+        }
+      ],
+      "total_value": 583.94
+    },
+    {
+      "date": "2023-11-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 81.68,
+          "value": 571.76
+        }
+      ],
+      "total_value": 571.76
+    },
+    {
+      "date": "2023-12-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 89.11,
+          "value": 623.77
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 189.45,
+          "value": 1894.51
+        }
+      ],
+      "total_value": 2518.28
+    },
+    {
+      "date": "2024-01-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 93.24,
+          "value": 652.68
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 191.34,
+          "value": 1913.43
+        }
+      ],
+      "total_value": 2566.11
+    },
+    {
+      "date": "2024-02-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 94.09,
+          "value": 658.63
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 185.11,
+          "value": 1851.12
+        }
+      ],
+      "total_value": 2509.75
+    },
+    {
+      "date": "2024-03-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 98.54,
+          "value": 689.78
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 178.21,
+          "value": 1782.06
+        }
+      ],
+      "total_value": 2471.84
+    },
+    {
+      "date": "2024-04-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 100.82,
+          "value": 705.74
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 168.65,
+          "value": 1686.54
+        }
+      ],
+      "total_value": 2392.28
+    },
+    {
+      "date": "2024-05-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 97.04,
+          "value": 679.28
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 167.93,
+          "value": 1679.3
+        }
+      ],
+      "total_value": 2358.58
+    },
+    {
+      "date": "2024-06-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 102.32,
+          "value": 716.24
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 188.71,
+          "value": 1887.08
+        }
+      ],
+      "total_value": 2603.32
+    },
+    {
+      "date": "2024-07-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 104.3,
+          "value": 730.1
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 215.29,
+          "value": 2152.88
+        }
+      ],
+      "total_value": 2882.98
+    },
+    {
+      "date": "2024-08-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 104.44,
+          "value": 731.08
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 216.89,
+          "value": 2168.87
+        }
+      ],
+      "total_value": 2899.95
+    },
+    {
+      "date": "2024-09-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 107.82,
+          "value": 754.74
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 226.75,
+          "value": 2267.54
+        }
+      ],
+      "total_value": 3022.28
+    },
+    {
+      "date": "2024-10-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 109.12,
+          "value": 763.84
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 224.94,
+          "value": 2249.44
+        }
+      ],
+      "total_value": 3013.28
+    },
+    {
+      "date": "2024-11-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 108.92,
+          "value": 762.44
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 221.66,
+          "value": 2216.62
+        }
+      ],
+      "total_value": 2979.06
+    },
+    {
+      "date": "2024-12-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 111.94,
+          "value": 783.58
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 234.0,
+          "value": 2340.02
+        }
+      ],
+      "total_value": 3123.6
+    },
+    {
+      "date": "2025-01-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 111.06,
+          "value": 777.42
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 254.44,
+          "value": 2544.39
+        }
+      ],
+      "total_value": 3321.81
+    },
+    {
+      "date": "2025-02-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 112.64,
+          "value": 788.48
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 228.83,
+          "value": 2288.25
+        }
+      ],
+      "total_value": 3076.73
+    },
+    {
+      "date": "2025-03-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 114.02,
+          "value": 798.14
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 246.26,
+          "value": 2462.58
+        }
+      ],
+      "total_value": 3260.72
+    },
+    {
+      "date": "2025-04-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 108.72,
+          "value": 761.04
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 222.43,
+          "value": 2224.29
+        }
+      ],
+      "total_value": 2985.33
+    },
+    {
+      "date": "2025-05-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 110.34,
+          "value": 772.38
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 212.59,
+          "value": 2125.93
+        }
+      ],
+      "total_value": 2898.31
+    },
+    {
+      "date": "2025-06-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 115.78,
+          "value": 810.46
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 199.79,
+          "value": 1997.89
+        }
+      ],
+      "total_value": 2808.35
+    },
+    {
+      "date": "2025-07-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 120.64,
+          "value": 844.48
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 207.38,
+          "value": 2073.83
+        }
+      ],
+      "total_value": 2918.31
+    },
+    {
+      "date": "2025-08-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 120.6,
+          "value": 844.2
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 201.95,
+          "value": 2019.55
+        }
+      ],
+      "total_value": 2863.75
+    },
+    {
+      "date": "2025-09-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 125.79,
+          "value": 880.53
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 230.27,
+          "value": 2302.67
+        }
+      ],
+      "total_value": 3183.2
+    },
+    {
+      "date": "2025-10-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 129.96,
+          "value": 909.72
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 255.2,
+          "value": 2552.03
+        }
+      ],
+      "total_value": 3461.75
+    },
+    {
+      "date": "2025-11-01",
+      "holdings": [
+        {
+          "ticker": "VHVE.L",
+          "quantity": 7.0,
+          "price": 133.22,
+          "value": 932.54
+        },
+        {
+          "ticker": "AAPL",
+          "quantity": 10.0,
+          "price": 268.55,
+          "value": 2685.5
+        }
+      ],
+      "total_value": 3618.04
+    }
+  ]
+}

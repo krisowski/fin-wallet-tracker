@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Portfolio Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .generated-info {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            min-width: 150px;
+            margin: 10px;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-value.positive {
+            color: #28a745;
+        }
+        .stat-value.negative {
+            color: #dc3545;
+        }
+        .holdings-section {
+            margin-top: 40px;
+        }
+        .holdings-section h2 {
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        .ticker {
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Stock Portfolio Visualization</h1>
+        <div class="generated-info">Data generated: 2025-11-11 19:24:57</div>
+
+        <div class="chart-container">
+            <canvas id="portfolioChart"></canvas>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-label">Current Value</div>
+                <div class="stat-value">$3,618.04</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Initial Value</div>
+                <div class="stat-value">$563.43</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Change</div>
+                <div class="stat-value positive">$+3,054.61</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Percentage Change</div>
+                <div class="stat-value positive">+542.15%</div>
+            </div>
+        </div>
+
+        <div class="holdings-section">
+            <h2>Current Holdings</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Quantity</th>
+                        <th>Current Price</th>
+                        <th>Current Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ticker">VHVE.L</td>
+                        <td>7.0</td>
+                        <td>$133.22</td>
+                        <td>$932.54</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker">AAPL</td>
+                        <td>10.0</td>
+                        <td>$268.55</td>
+                        <td>$2,685.50</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="holdings-section">
+            <h2>Transactions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Purchase Date</th>
+                        <th>Quantity</th>
+                        <th>Purchase Price</th>
+                        <th>Transaction Fees</th>
+                        <th>Total Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ticker">VHVE.L</td>
+                        <td>2023-01-03</td>
+                        <td>7.0</td>
+                        <td>$75.00</td>
+                        <td>$1.00</td>
+                        <td>$526.00</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker">AAPL</td>
+                        <td>2023-11-03</td>
+                        <td>10.0</td>
+                        <td>$170.00</td>
+                        <td>$1.00</td>
+                        <td>$1,701.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('portfolioChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ["2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01", "2025-01-01", "2025-02-01", "2025-03-01", "2025-04-01", "2025-05-01", "2025-06-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-10-01", "2025-11-01"],
+                datasets: [{
+                    label: 'Portfolio Value ($)',
+                    data: [563.43, 548.1, 548.91, 568.75, 577.19, 593.81, 621.39, 611.62, 583.94, 571.76, 2518.28, 2566.11, 2509.75, 2471.84, 2392.28, 2358.58, 2603.32, 2882.98, 2899.95, 3022.28, 3013.28, 2979.06, 3123.6, 3321.81, 3076.73, 3260.72, 2985.33, 2898.31, 2808.35, 2918.31, 2863.75, 3183.2, 3461.75, 3618.04],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Value: $' + context.parsed.y.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
