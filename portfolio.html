@@ -30,6 +30,29 @@
             font-size: 14px;
             margin-bottom: 30px;
         }
+        .filter-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .filter-label {
+            font-weight: bold;
+            color: #333;
+        }
+        .filter-dropdown {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            background-color: white;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        .filter-dropdown:hover {
+            border-color: #007bff;
+        }
         .chart-container {
             position: relative;
             height: 400px;
@@ -101,6 +124,15 @@
     <div class="container">
         <h1>Stock Portfolio Visualization</h1>
         <div class="generated-info">Data generated: 2025-11-11 21:16:48</div>
+
+        <div class="filter-container">
+            <label class="filter-label" for="tickerFilter">Select Ticker:</label>
+            <select id="tickerFilter" class="filter-dropdown">
+                <option value="all">All Tickers</option>
+                <option value="AAPL">AAPL</option>
+                <option value="VHVE.L">VHVE.L</option>
+            </select>
+        </div>
 
         <div class="chart-container">
             <canvas id="portfolioChart"></canvas>
@@ -198,18 +230,26 @@
 
     <script>
         const ctx = document.getElementById('portfolioChart').getContext('2d');
+
+        // All datasets (per-ticker and total)
+        const allDatasets = [{"label": "AAPL", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1894.5, 1913.4, 1851.1, 1782.1, 1686.5, 1679.3, 1887.1, 2152.9, 2168.9, 2267.5, 2249.4, 2216.6, 2340.0, 2544.4, 2288.3, 2462.6, 2224.3, 2125.9, 1997.9, 2073.8, 2019.5, 2302.7, 2552.0, 2685.5], "borderColor": "rgb(255, 99, 132)", "backgroundColor": "rgba(255, 99, 132, 0.2)", "tension": 0.1, "fill": true}, {"label": "VHVE.L", "data": [563.43, 548.1, 548.94, 568.75, 577.22, 593.81, 621.39, 611.66, 583.94, 571.76, 623.77, 652.68, 1599.53, 1675.18, 1713.94, 1649.68, 1739.44, 1773.1, 1775.48, 1832.94, 1855.04, 1851.64, 1902.98, 1888.02, 1914.88, 1938.34, 1848.24, 1875.78, 1968.26, 2050.88, 2050.2, 2138.43, 2209.32, 2264.74], "borderColor": "rgb(54, 162, 235)", "backgroundColor": "rgba(54, 162, 235, 0.2)", "tension": 0.1, "fill": true}];
+
+        // Total portfolio dataset
+        const totalDataset = {
+            label: 'Total Portfolio Value ($)',
+            data: [563.43, 548.1, 548.94, 568.75, 577.22, 593.81, 621.39, 611.66, 583.94, 571.76, 2518.27, 2566.08, 3450.63, 3457.28, 3400.44, 3328.98, 3626.54, 3926.0, 3944.38, 4100.44, 4104.44, 4068.24, 4242.98, 4432.42, 4203.18, 4400.94, 4072.54, 4001.68, 3966.16, 4124.68, 4069.7, 4441.13, 4761.32, 4950.24],
+            borderColor: 'rgb(0, 0, 0)',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            tension: 0.1,
+            fill: true,
+            borderWidth: 2
+        };
+
         const chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ["2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01", "2025-01-01", "2025-02-01", "2025-03-01", "2025-04-01", "2025-05-01", "2025-06-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-10-01", "2025-11-01"],
-                datasets: [{
-                    label: 'Portfolio Value ($)',
-                    data: [563.43, 548.1, 548.94, 568.75, 577.22, 593.81, 621.39, 611.66, 583.94, 571.76, 2518.27, 2566.08, 3450.63, 3457.28, 3400.44, 3328.98, 3626.54, 3926.0, 3944.38, 4100.44, 4104.44, 4068.24, 4242.98, 4432.42, 4203.18, 4400.94, 4072.54, 4001.68, 3966.16, 4124.68, 4069.7, 4441.13, 4761.32, 4950.24],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1,
-                    fill: true
-                }]
+                datasets: [...allDatasets, totalDataset]
             },
             options: {
                 responsive: true,
@@ -222,7 +262,7 @@
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return 'Value: $' + context.parsed.y.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                             }
                         }
                     }
@@ -244,6 +284,21 @@
                     }
                 }
             }
+        });
+
+        // Dropdown filter functionality
+        document.getElementById('tickerFilter').addEventListener('change', function(e) {
+            const selectedTicker = e.target.value;
+
+            if (selectedTicker === 'all') {
+                // Show all ticker datasets plus total
+                chart.data.datasets = [...allDatasets, totalDataset];
+            } else {
+                // Show only the selected ticker
+                chart.data.datasets = allDatasets.filter(ds => ds.label === selectedTicker);
+            }
+
+            chart.update();
         });
     </script>
 </body>

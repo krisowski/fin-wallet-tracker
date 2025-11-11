@@ -31,6 +31,52 @@ def generate_html(data, output_file='portfolio.html'):
     dates = [pv['date'] for pv in portfolio_values]
     values = [pv['total_value'] for pv in portfolio_values]
 
+    # Extract unique tickers and prepare per-ticker data
+    all_tickers = set()
+    for pv in portfolio_values:
+        for holding in pv['holdings']:
+            all_tickers.add(holding['ticker'])
+
+    unique_tickers = sorted(list(all_tickers))
+
+    # Color palette for tickers
+    colors = [
+        'rgb(255, 99, 132)',   # Red
+        'rgb(54, 162, 235)',   # Blue
+        'rgb(255, 206, 86)',   # Yellow
+        'rgb(75, 192, 192)',   # Teal
+        'rgb(153, 102, 255)',  # Purple
+        'rgb(255, 159, 64)',   # Orange
+        'rgb(199, 199, 199)',  # Grey
+        'rgb(83, 102, 255)',   # Indigo
+        'rgb(255, 99, 255)',   # Pink
+        'rgb(99, 255, 132)',   # Green
+    ]
+
+    # Build per-ticker datasets
+    ticker_datasets = []
+    for idx, ticker in enumerate(unique_tickers):
+        ticker_values = []
+        for pv in portfolio_values:
+            ticker_value = 0
+            for holding in pv['holdings']:
+                if holding['ticker'] == ticker:
+                    ticker_value = holding['value']
+                    break
+            ticker_values.append(ticker_value)
+
+        color = colors[idx % len(colors)]
+        color_rgba = color.replace('rgb', 'rgba').replace(')', ', 0.2)')
+
+        ticker_datasets.append({
+            'label': ticker,
+            'data': ticker_values,
+            'borderColor': color,
+            'backgroundColor': color_rgba,
+            'tension': 0.1,
+            'fill': True
+        })
+
     # Calculate statistics
     current_value = values[-1] if values else 0
     initial_value = values[0] if values else 0
@@ -68,6 +114,29 @@ def generate_html(data, output_file='portfolio.html'):
             color: #666;
             font-size: 14px;
             margin-bottom: 30px;
+        }}
+        .filter-container {{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }}
+        .filter-label {{
+            font-weight: bold;
+            color: #333;
+        }}
+        .filter-dropdown {{
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            background-color: white;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 150px;
+        }}
+        .filter-dropdown:hover {{
+            border-color: #007bff;
         }}
         .chart-container {{
             position: relative;
@@ -140,6 +209,20 @@ def generate_html(data, output_file='portfolio.html'):
     <div class="container">
         <h1>Stock Portfolio Visualization</h1>
         <div class="generated-info">Data generated: {generated_at}</div>
+
+        <div class="filter-container">
+            <label class="filter-label" for="tickerFilter">Select Ticker:</label>
+            <select id="tickerFilter" class="filter-dropdown">
+                <option value="all">All Tickers</option>
+"""
+
+    # Add ticker options to dropdown
+    for ticker in unique_tickers:
+        html_content += f"""                <option value="{ticker}">{ticker}</option>
+"""
+
+    html_content += f"""            </select>
+        </div>
 
         <div class="chart-container">
             <canvas id="portfolioChart"></canvas>
@@ -230,18 +313,26 @@ def generate_html(data, output_file='portfolio.html'):
 
     <script>
         const ctx = document.getElementById('portfolioChart').getContext('2d');
+
+        // All datasets (per-ticker and total)
+        const allDatasets = {json.dumps(ticker_datasets)};
+
+        // Total portfolio dataset
+        const totalDataset = {{
+            label: 'Total Portfolio Value ($)',
+            data: {json.dumps(values)},
+            borderColor: 'rgb(0, 0, 0)',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            tension: 0.1,
+            fill: true,
+            borderWidth: 2
+        }};
+
         const chart = new Chart(ctx, {{
             type: 'line',
             data: {{
                 labels: {json.dumps(dates)},
-                datasets: [{{
-                    label: 'Portfolio Value ($)',
-                    data: {json.dumps(values)},
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1,
-                    fill: true
-                }}]
+                datasets: [...allDatasets, totalDataset]
             }},
             options: {{
                 responsive: true,
@@ -254,7 +345,7 @@ def generate_html(data, output_file='portfolio.html'):
                     tooltip: {{
                         callbacks: {{
                             label: function(context) {{
-                                return 'Value: $' + context.parsed.y.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
                             }}
                         }}
                     }}
@@ -276,6 +367,21 @@ def generate_html(data, output_file='portfolio.html'):
                     }}
                 }}
             }}
+        }});
+
+        // Dropdown filter functionality
+        document.getElementById('tickerFilter').addEventListener('change', function(e) {{
+            const selectedTicker = e.target.value;
+
+            if (selectedTicker === 'all') {{
+                // Show all ticker datasets plus total
+                chart.data.datasets = [...allDatasets, totalDataset];
+            }} else {{
+                // Show only the selected ticker
+                chart.data.datasets = allDatasets.filter(ds => ds.label === selectedTicker);
+            }}
+
+            chart.update();
         }});
     </script>
 </body>
