@@ -1,54 +1,36 @@
 #!/usr/bin/env python3
 """
 Stock Price Fetcher - Step 1
-Parses my-tickers.csv, fetches historical prices, and saves all data
-to portfolio_data.json for manual inspection and later visualization.
+Scans my-tickers.csv for unique tickers and fetches their historical prices
+to prices.csv. This is a separate step so you don't need to refetch all prices
+from Yahoo every time you add a new transaction.
 """
 
 import csv
 import yfinance as yf
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from collections import defaultdict
-import json
+import os
 
 
-def parse_csv(filename):
-    """Parse the CSV file and return list of transactions."""
-    transactions = []
+def get_unique_tickers(filename):
+    """Parse my-tickers.csv and return list of unique tickers and earliest date."""
+    tickers = set()
+    earliest_date = None
+
     with open(filename, 'r') as f:
-        # Read the raw lines to handle malformed CSV
-        lines = f.readlines()
+        reader = csv.DictReader(f)
+        for row in reader:
+            ticker = row['ticker'].strip()
+            if ticker:
+                tickers.add(ticker)
 
-        # Parse data rows manually (skip header)
-        for line in lines[1:]:
-            line = line.strip()
-            if not line:  # Skip empty lines
-                continue
+            # Track earliest purchase date
+            purchase_date = datetime.strptime(row['purchase_date'], '%Y-%m-%d')
+            if earliest_date is None or purchase_date < earliest_date:
+                earliest_date = purchase_date
 
-            parts = line.split(',')
-            if len(parts) >= 5:
-                ticker = parts[0]
-                purchase_date = datetime.strptime(parts[1], '%Y-%m-%d')
-                quantity = float(parts[2])
-                purchase_price = float(parts[3])
-                transaction_fees = float(parts[4])
-
-                transactions.append({
-                    'ticker': ticker,
-                    'purchase_date': purchase_date.strftime('%Y-%m-%d'),
-                    'quantity': quantity,
-                    'purchase_price': purchase_price,
-                    'transaction_fees': transaction_fees
-                })
-
-    return transactions
-
-
-def get_earliest_date(transactions):
-    """Get the earliest purchase date from transactions."""
-    dates = [datetime.strptime(t['purchase_date'], '%Y-%m-%d') for t in transactions]
-    return min(dates)
+    return sorted(list(tickers)), earliest_date
 
 
 def generate_month_dates(start_date, end_date):
@@ -67,16 +49,26 @@ def generate_month_dates(start_date, end_date):
     return dates
 
 
-def get_holdings_at_date(transactions, target_date):
-    """Calculate total holdings of each ticker up to the target date."""
-    holdings = defaultdict(float)
+def load_existing_prices(filename):
+    """Load existing prices from prices.csv if it exists (wide format)."""
+    prices = {}
 
-    for transaction in transactions:
-        trans_date = datetime.strptime(transaction['purchase_date'], '%Y-%m-%d')
-        if trans_date <= target_date:
-            holdings[transaction['ticker']] += transaction['quantity']
+    if not os.path.exists(filename):
+        return prices
 
-    return dict(holdings)
+    with open(filename, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            date = row['date']
+
+            # Iterate through all columns except 'date'
+            for ticker in row.keys():
+                if ticker != 'date' and row[ticker]:
+                    if ticker not in prices:
+                        prices[ticker] = {}
+                    prices[ticker][date] = float(row[ticker])
+
+    return prices
 
 
 def fetch_price(ticker, date):
@@ -105,87 +97,82 @@ def fetch_price(ticker, date):
         return None
 
 
-def fetch_portfolio_data(transactions, dates):
-    """Fetch prices and calculate portfolio values at each date."""
-    portfolio_data = []
+def fetch_and_save_prices(tickers, dates, output_file='prices.csv'):
+    """Fetch prices for all tickers and dates, merging with existing data."""
+    # Load existing prices
+    existing_prices = load_existing_prices(output_file)
+
+    print(f"Found {sum(len(d) for d in existing_prices.values())} existing price entries")
+
+    # Collect all price data in a dict: {date: {ticker: price}}
+    price_data = {}
+    fetch_count = 0
+    skip_count = 0
 
     for date in dates:
-        holdings = get_holdings_at_date(transactions, date)
-        date_data = {
-            'date': date.strftime('%Y-%m-%d'),
-            'holdings': [],
-            'total_value': 0
-        }
+        date_str = date.strftime('%Y-%m-%d')
+        price_data[date_str] = {}
 
-        print(f"Fetching prices for {date.strftime('%Y-%m-%d')}...")
+        for ticker in tickers:
+            # Check if we already have this price
+            if ticker in existing_prices and date_str in existing_prices[ticker]:
+                price = existing_prices[ticker][date_str]
+                skip_count += 1
+            else:
+                # Fetch new price
+                price = fetch_price(ticker, date)
+                if price is not None:
+                    fetch_count += 1
+                    print(f"{ticker} {date_str}: ${price:.2f}")
+                else:
+                    price = None
+                    continue
 
-        for ticker, quantity in holdings.items():
-            price = fetch_price(ticker, date)
             if price is not None:
-                value = quantity * price
-                date_data['holdings'].append({
-                    'ticker': ticker,
-                    'quantity': quantity,
-                    'price': round(price, 2),
-                    'value': round(value, 2)
-                })
-                date_data['total_value'] += value
-                print(f"  {ticker}: {quantity} shares × ${price:.2f} = ${value:.2f}")
+                price_data[date_str][ticker] = round(price, 2)
 
-        date_data['total_value'] = round(date_data['total_value'], 2)
-        portfolio_data.append(date_data)
-        print(f"  Total: ${date_data['total_value']:.2f}\n")
+    # Write to CSV in wide format (date, ticker1, ticker2, ...)
+    with open(output_file, 'w', newline='') as f:
+        fieldnames = ['date'] + tickers
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
 
-    return portfolio_data
+        for date_str in sorted(price_data.keys()):
+            row = {'date': date_str}
+            row.update(price_data[date_str])
+            writer.writerow(row)
 
-
-def save_portfolio_data(transactions, portfolio_data, output_file='portfolio_data.json'):
-    """Save portfolio data to JSON file for inspection and later use."""
-    output = {
-        'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'transactions': transactions,
-        'portfolio_values': portfolio_data
-    }
-
-    with open(output_file, 'w') as f:
-        json.dump(output, f, indent=2)
-
-    print(f"Portfolio data saved to: {output_file}")
+    total_entries = sum(len(prices) for prices in price_data.values())
+    print(f"\n{'-' * 50}")
+    print(f"Prices saved to: {output_file}")
+    print(f"Total entries: {total_entries}")
+    print(f"Newly fetched: {fetch_count}")
+    print(f"Used from cache: {skip_count}")
 
 
 def main():
-    """Main function to fetch and save portfolio data."""
+    """Main function to fetch and save price data."""
     print("Stock Price Fetcher - Step 1")
     print("=" * 50)
 
-    # Parse CSV
-    print("\n1. Parsing CSV file...")
-    transactions = parse_csv('my-tickers.csv')
-    print(f"   Found {len(transactions)} transactions")
-
-    # Get date range
-    print("\n2. Determining date range...")
-    earliest_date = get_earliest_date(transactions)
-    today = datetime.now()
+    # Parse CSV for unique tickers
+    print("\n1. Scanning my-tickers.csv for unique tickers...")
+    tickers, earliest_date = get_unique_tickers('my-tickers.csv')
+    print(f"   Found {len(tickers)} unique tickers: {', '.join(tickers)}")
     print(f"   Earliest purchase: {earliest_date.strftime('%Y-%m-%d')}")
-    print(f"   Today: {today.strftime('%Y-%m-%d')}")
 
     # Generate month dates
-    print("\n3. Generating monthly dates...")
+    print("\n2. Generating monthly dates...")
+    today = datetime.now()
     dates = generate_month_dates(earliest_date, today)
-    print(f"   Generated {len(dates)} dates")
+    print(f"   Generated {len(dates)} dates from {dates[0].strftime('%Y-%m-%d')} to {dates[-1].strftime('%Y-%m-%d')}")
 
-    # Fetch prices and calculate portfolio values
-    print("\n4. Fetching prices and calculating values...")
-    portfolio_data = fetch_portfolio_data(transactions, dates)
-
-    # Save to JSON
-    print("\n5. Saving data to JSON file...")
-    save_portfolio_data(transactions, portfolio_data)
+    # Fetch and save prices
+    print("\n3. Fetching prices (skipping existing ones)...")
+    fetch_and_save_prices(tickers, dates)
 
     print("\n" + "=" * 50)
-    print("Done! Data saved to portfolio_data.json")
-    print("Run 'python build_html.py' to generate the visualization")
+    print("Done! Run 'make build' to prepare portfolio data and generate HTML")
 
 
 if __name__ == '__main__':
