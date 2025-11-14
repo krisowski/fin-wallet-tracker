@@ -104,13 +104,17 @@ def generate_html(data, output_file='portfolio.html'):
     for idx, ticker in enumerate(unique_tickers):
         ticker_values = []
         ticker_profits = []
+        ticker_quantities = []
         for i, pv in enumerate(portfolio_values):
             ticker_value = 0
+            ticker_quantity = 0
             for holding in pv['holdings']:
                 if holding['ticker'] == ticker:
                     ticker_value = holding['value']
+                    ticker_quantity = holding['quantity']
                     break
             ticker_values.append(ticker_value)
+            ticker_quantities.append(ticker_quantity)
 
             # Calculate profit at this point in time
             ticker_cost = cost_basis_timeline[ticker][i]
@@ -128,7 +132,9 @@ def generate_html(data, output_file='portfolio.html'):
             'backgroundColor': color_rgba,
             'tension': 0.1,
             'fill': True,
-            'tickerName': ticker
+            'tickerName': ticker,
+            'quantities': ticker_quantities,
+            'profits': ticker_profits
         })
 
         # Profit dataset (dashed line, same color but darker)
@@ -145,16 +151,22 @@ def generate_html(data, output_file='portfolio.html'):
             'tickerName': ticker,
             'isProfit': True,
             'hidden': False,
-            'order': 2
+            'order': 2,
+            'quantities': ticker_quantities
         })
 
-    # Calculate total profit over time
+    # Calculate total profit over time and total quantities
     total_profit_values = []
+    total_quantities = []
     for i, pv in enumerate(portfolio_values):
         # Sum up all cost basis at this point in time
         total_cost_at_date = sum(cost_basis_timeline[ticker][i] for ticker in unique_tickers)
         total_profit_at_date = pv['total_value'] - total_cost_at_date
         total_profit_values.append(total_profit_at_date)
+
+        # Sum up all quantities at this point in time
+        total_qty = sum(holding['quantity'] for holding in pv['holdings'])
+        total_quantities.append(total_qty)
 
     # Prepare transaction annotations for chart
     # Find the closest chart date for each transaction
@@ -199,7 +211,7 @@ def generate_html(data, output_file='portfolio.html'):
             }
         })
 
-    # Calculate statistics
+    # Calculate statistics for total portfolio
     current_value = values[-1] if values else 0
     initial_value = values[0] if values else 0
     total_change = current_value - initial_value
@@ -209,6 +221,24 @@ def generate_html(data, output_file='portfolio.html'):
     total_cost_basis = sum(cost_basis.values())
     total_profit = current_value - total_cost_basis
     total_profit_percent = ((total_profit / total_cost_basis * 100) if total_cost_basis != 0 else 0)
+
+    # Calculate per-ticker statistics
+    ticker_stats = {}
+    if portfolio_values:
+        current_holdings = portfolio_values[-1]['holdings']
+        for holding in current_holdings:
+            ticker = holding['ticker']
+            ticker_cost = cost_basis.get(ticker, 0)
+            ticker_value = holding['value']
+            ticker_profit = ticker_value - ticker_cost
+            ticker_return = ((ticker_profit / ticker_cost * 100) if ticker_cost != 0 else 0)
+
+            ticker_stats[ticker] = {
+                'current_value': ticker_value,
+                'cost_basis': ticker_cost,
+                'profit': ticker_profit,
+                'return_percent': ticker_return
+            }
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -270,6 +300,20 @@ def generate_html(data, output_file='portfolio.html'):
             position: relative;
             height: 400px;
             margin-bottom: 20px;
+        }}
+        .stats-header {{
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }}
+        .stats-label {{
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            padding: 8px 16px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: inline-block;
         }}
         .stats {{
             display: flex;
@@ -365,22 +409,26 @@ def generate_html(data, output_file='portfolio.html'):
             <canvas id="portfolioChart"></canvas>
         </div>
 
+        <div class="stats-header">
+            <span class="stats-label" id="statsLabel">All Tickers</span>
+        </div>
+
         <div class="stats">
             <div class="stat-box">
                 <div class="stat-label">Current Value</div>
-                <div class="stat-value">${current_value:,.2f}</div>
+                <div class="stat-value" id="statCurrentValue">${current_value:,.2f}</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Total Cost</div>
-                <div class="stat-value">${total_cost_basis:,.2f}</div>
+                <div class="stat-value" id="statTotalCost">${total_cost_basis:,.2f}</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Total Profit/Loss</div>
-                <div class="stat-value {'positive' if total_profit >= 0 else 'negative'}">${total_profit:+,.2f}</div>
+                <div class="stat-value {'positive' if total_profit >= 0 else 'negative'}" id="statProfit">${total_profit:+,.2f}</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Return</div>
-                <div class="stat-value {'positive' if total_profit_percent >= 0 else 'negative'}">{total_profit_percent:+.2f}%</div>
+                <div class="stat-value {'positive' if total_profit_percent >= 0 else 'negative'}" id="statReturn">{total_profit_percent:+.2f}%</div>
             </div>
         </div>
 
@@ -478,7 +526,9 @@ def generate_html(data, output_file='portfolio.html'):
             tension: 0.1,
             fill: true,
             borderWidth: 3,
-            tickerName: 'total'
+            tickerName: 'total',
+            quantities: {json.dumps(total_quantities)},
+            profits: {json.dumps(total_profit_values)}
         }};
 
         // Total portfolio profit dataset
@@ -494,7 +544,8 @@ def generate_html(data, output_file='portfolio.html'):
             tickerName: 'total',
             isProfit: true,
             hidden: false,
-            order: 2
+            order: 2,
+            quantities: {json.dumps(total_quantities)}
         }};
 
         const chart = new Chart(ctx, {{
@@ -540,7 +591,34 @@ def generate_html(data, output_file='portfolio.html'):
                     tooltip: {{
                         callbacks: {{
                             label: function(context) {{
-                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+                                const dataset = context.dataset;
+                                const dataIndex = context.dataIndex;
+                                const value = context.parsed.y;
+                                const formattedValue = '$' + value.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+
+                                let lines = [];
+
+                                if (dataset.isProfit) {{
+                                    // Profit dataset - show profit and quantity
+                                    lines.push(dataset.label + ': ' + formattedValue);
+                                    if (dataset.quantities && dataset.quantities[dataIndex]) {{
+                                        lines.push('  Shares: ' + dataset.quantities[dataIndex].toFixed(1));
+                                    }}
+                                }} else {{
+                                    // Value dataset - show value, quantity, and profit
+                                    lines.push(dataset.label + ': ' + formattedValue);
+                                    if (dataset.quantities && dataset.quantities[dataIndex]) {{
+                                        lines.push('  Shares: ' + dataset.quantities[dataIndex].toFixed(1));
+                                    }}
+                                    if (dataset.profits && dataset.profits[dataIndex] !== undefined) {{
+                                        const profit = dataset.profits[dataIndex];
+                                        const profitSign = profit >= 0 ? '+' : '';
+                                        const formattedProfit = '$' + profitSign + profit.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+                                        lines.push('  Profit: ' + formattedProfit);
+                                    }}
+                                }}
+
+                                return lines;
                             }}
                         }}
                     }},
@@ -570,6 +648,32 @@ def generate_html(data, output_file='portfolio.html'):
         // Store all annotations
         const allAnnotations = {json.dumps(transaction_annotations)};
 
+        // Store ticker statistics
+        const tickerStats = {json.dumps(ticker_stats)};
+        const totalStats = {{
+            current_value: {current_value},
+            cost_basis: {total_cost_basis},
+            profit: {total_profit},
+            return_percent: {total_profit_percent}
+        }};
+
+        // Function to update stats display
+        function updateStats(label, stats) {{
+            document.getElementById('statsLabel').textContent = label;
+            document.getElementById('statCurrentValue').textContent = '$' + stats.current_value.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+            document.getElementById('statTotalCost').textContent = '$' + stats.cost_basis.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+
+            const profitElement = document.getElementById('statProfit');
+            const profitSign = stats.profit >= 0 ? '+' : '';
+            profitElement.textContent = '$' + profitSign + stats.profit.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+            profitElement.className = 'stat-value ' + (stats.profit >= 0 ? 'positive' : 'negative');
+
+            const returnElement = document.getElementById('statReturn');
+            const returnSign = stats.return_percent >= 0 ? '+' : '';
+            returnElement.textContent = returnSign + stats.return_percent.toFixed(2) + '%';
+            returnElement.className = 'stat-value ' + (stats.return_percent >= 0 ? 'positive' : 'negative');
+        }}
+
         // Dropdown filter functionality
         document.getElementById('tickerFilter').addEventListener('change', function(e) {{
             const selectedTicker = e.target.value;
@@ -579,11 +683,15 @@ def generate_html(data, output_file='portfolio.html'):
                 chart.data.datasets = [...tickerValueDatasets, ...tickerProfitDatasets, totalValueDataset, totalProfitDataset];
                 // Show all annotations
                 chart.options.plugins.annotation.annotations = allAnnotations;
+                // Update stats to show total portfolio
+                updateStats('All Tickers', totalStats);
             }} else if (selectedTicker === 'total') {{
                 // Show only total portfolio value and profit
                 chart.data.datasets = [totalValueDataset, totalProfitDataset];
                 // Show all annotations for total view
                 chart.options.plugins.annotation.annotations = allAnnotations;
+                // Update stats to show total portfolio
+                updateStats('Total Portfolio Only', totalStats);
             }} else {{
                 // Show only the selected ticker's value and profit
                 const tickerValueDs = tickerValueDatasets.filter(ds => ds.tickerName === selectedTicker);
@@ -591,6 +699,8 @@ def generate_html(data, output_file='portfolio.html'):
                 chart.data.datasets = [...tickerValueDs, ...tickerProfitDs];
                 // Show only annotations for selected ticker
                 chart.options.plugins.annotation.annotations = allAnnotations.filter(ann => ann.ticker === selectedTicker);
+                // Update stats to show selected ticker
+                updateStats(selectedTicker, tickerStats[selectedTicker]);
             }}
 
             chart.update();

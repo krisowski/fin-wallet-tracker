@@ -59,6 +59,20 @@
             height: 400px;
             margin-bottom: 20px;
         }
+        .stats-header {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+        .stats-label {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            padding: 8px 16px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: inline-block;
+        }
         .stats {
             display: flex;
             justify-content: space-around;
@@ -132,7 +146,7 @@
 <body>
     <div class="container">
         <h1>Stock Portfolio Visualization</h1>
-        <div class="generated-info">Data generated: 2025-11-14 18:47:47</div>
+        <div class="generated-info">Data generated: 2025-11-14 19:20:20</div>
 
         <div class="filter-container">
             <label class="filter-label" for="tickerFilter">Select Ticker:</label>
@@ -148,22 +162,26 @@
             <canvas id="portfolioChart"></canvas>
         </div>
 
+        <div class="stats-header">
+            <span class="stats-label" id="statsLabel">All Tickers</span>
+        </div>
+
         <div class="stats">
             <div class="stat-box">
                 <div class="stat-label">Current Value</div>
-                <div class="stat-value">$4,950.24</div>
+                <div class="stat-value" id="statCurrentValue">$4,950.24</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Total Cost</div>
-                <div class="stat-value">$3,128.00</div>
+                <div class="stat-value" id="statTotalCost">$3,128.00</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Total Profit/Loss</div>
-                <div class="stat-value positive">$+1,822.24</div>
+                <div class="stat-value positive" id="statProfit">$+1,822.24</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Return</div>
-                <div class="stat-value positive">+58.26%</div>
+                <div class="stat-value positive" id="statReturn">+58.26%</div>
             </div>
         </div>
 
@@ -251,10 +269,10 @@
         const ctx = document.getElementById('portfolioChart').getContext('2d');
 
         // Ticker value datasets
-        const tickerValueDatasets = [{"label": "AAPL", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1894.5, 1913.4, 1851.1, 1782.1, 1686.5, 1679.3, 1887.1, 2152.9, 2168.9, 2267.5, 2249.4, 2216.6, 2340.0, 2544.4, 2288.3, 2462.6, 2224.3, 2125.9, 1997.9, 2073.8, 2019.5, 2302.7, 2552.0, 2685.5], "borderColor": "rgb(255, 99, 132)", "backgroundColor": "rgba(255, 99, 132, 0.2)", "tension": 0.1, "fill": true, "tickerName": "AAPL"}, {"label": "VHVE.L", "data": [563.43, 548.1, 548.94, 568.75, 577.22, 593.81, 621.39, 611.66, 583.94, 571.76, 623.77, 652.68, 1599.53, 1675.18, 1713.94, 1649.68, 1739.44, 1773.1, 1775.48, 1832.94, 1855.04, 1851.64, 1902.98, 1888.02, 1914.88, 1938.34, 1848.24, 1875.78, 1968.26, 2050.88, 2050.2, 2138.43, 2209.32, 2264.74], "borderColor": "rgb(54, 162, 235)", "backgroundColor": "rgba(54, 162, 235, 0.2)", "tension": 0.1, "fill": true, "tickerName": "VHVE.L"}];
+        const tickerValueDatasets = [{"label": "AAPL", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1894.5, 1913.4, 1851.1, 1782.1, 1686.5, 1679.3, 1887.1, 2152.9, 2168.9, 2267.5, 2249.4, 2216.6, 2340.0, 2544.4, 2288.3, 2462.6, 2224.3, 2125.9, 1997.9, 2073.8, 2019.5, 2302.7, 2552.0, 2685.5], "borderColor": "rgb(255, 99, 132)", "backgroundColor": "rgba(255, 99, 132, 0.2)", "tension": 0.1, "fill": true, "tickerName": "AAPL", "quantities": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0], "profits": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193.5, 212.4000000000001, 150.0999999999999, 81.09999999999991, -14.5, -21.700000000000045, 186.0999999999999, 451.9000000000001, 467.9000000000001, 566.5, 548.4000000000001, 515.5999999999999, 639.0, 843.4000000000001, 587.3000000000002, 761.5999999999999, 523.3000000000002, 424.9000000000001, 296.9000000000001, 372.8000000000002, 318.5, 601.6999999999998, 851.0, 984.5]}, {"label": "VHVE.L", "data": [563.43, 548.1, 548.94, 568.75, 577.22, 593.81, 621.39, 611.66, 583.94, 571.76, 623.77, 652.68, 1599.53, 1675.18, 1713.94, 1649.68, 1739.44, 1773.1, 1775.48, 1832.94, 1855.04, 1851.64, 1902.98, 1888.02, 1914.88, 1938.34, 1848.24, 1875.78, 1968.26, 2050.88, 2050.2, 2138.43, 2209.32, 2264.74], "borderColor": "rgb(54, 162, 235)", "backgroundColor": "rgba(54, 162, 235, 0.2)", "tension": 0.1, "fill": true, "tickerName": "VHVE.L", "quantities": [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0], "profits": [37.42999999999995, 22.100000000000023, 22.940000000000055, 42.75, 51.22000000000003, 67.80999999999995, 95.38999999999999, 85.65999999999997, 57.940000000000055, 45.75999999999999, 97.76999999999998, 126.67999999999995, 172.52999999999997, 248.18000000000006, 286.94000000000005, 222.68000000000006, 312.44000000000005, 346.0999999999999, 348.48, 405.94000000000005, 428.03999999999996, 424.6400000000001, 475.98, 461.02, 487.8800000000001, 511.3399999999999, 421.24, 448.78, 541.26, 623.8800000000001, 623.1999999999998, 711.4299999999998, 782.3200000000002, 837.7399999999998]}];
 
         // Ticker profit datasets
-        const tickerProfitDatasets = [{"label": "AAPL Profit", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193.5, 212.4000000000001, 150.0999999999999, 81.09999999999991, -14.5, -21.700000000000045, 186.0999999999999, 451.9000000000001, 467.9000000000001, 566.5, 548.4000000000001, 515.5999999999999, 639.0, 843.4000000000001, 587.3000000000002, 761.5999999999999, 523.3000000000002, 424.9000000000001, 296.9000000000001, 372.8000000000002, 318.5, 601.6999999999998, 851.0, 984.5], "borderColor": "rgba(255, 99, 132, 0.8)", "backgroundColor": "transparent", "tension": 0.1, "fill": false, "borderDash": [5, 5], "borderWidth": 2, "tickerName": "AAPL", "isProfit": true, "hidden": false, "order": 2}, {"label": "VHVE.L Profit", "data": [37.42999999999995, 22.100000000000023, 22.940000000000055, 42.75, 51.22000000000003, 67.80999999999995, 95.38999999999999, 85.65999999999997, 57.940000000000055, 45.75999999999999, 97.76999999999998, 126.67999999999995, 172.52999999999997, 248.18000000000006, 286.94000000000005, 222.68000000000006, 312.44000000000005, 346.0999999999999, 348.48, 405.94000000000005, 428.03999999999996, 424.6400000000001, 475.98, 461.02, 487.8800000000001, 511.3399999999999, 421.24, 448.78, 541.26, 623.8800000000001, 623.1999999999998, 711.4299999999998, 782.3200000000002, 837.7399999999998], "borderColor": "rgba(54, 162, 235, 0.8)", "backgroundColor": "transparent", "tension": 0.1, "fill": false, "borderDash": [5, 5], "borderWidth": 2, "tickerName": "VHVE.L", "isProfit": true, "hidden": false, "order": 2}];
+        const tickerProfitDatasets = [{"label": "AAPL Profit", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 193.5, 212.4000000000001, 150.0999999999999, 81.09999999999991, -14.5, -21.700000000000045, 186.0999999999999, 451.9000000000001, 467.9000000000001, 566.5, 548.4000000000001, 515.5999999999999, 639.0, 843.4000000000001, 587.3000000000002, 761.5999999999999, 523.3000000000002, 424.9000000000001, 296.9000000000001, 372.8000000000002, 318.5, 601.6999999999998, 851.0, 984.5], "borderColor": "rgba(255, 99, 132, 0.8)", "backgroundColor": "transparent", "tension": 0.1, "fill": false, "borderDash": [5, 5], "borderWidth": 2, "tickerName": "AAPL", "isProfit": true, "hidden": false, "order": 2, "quantities": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]}, {"label": "VHVE.L Profit", "data": [37.42999999999995, 22.100000000000023, 22.940000000000055, 42.75, 51.22000000000003, 67.80999999999995, 95.38999999999999, 85.65999999999997, 57.940000000000055, 45.75999999999999, 97.76999999999998, 126.67999999999995, 172.52999999999997, 248.18000000000006, 286.94000000000005, 222.68000000000006, 312.44000000000005, 346.0999999999999, 348.48, 405.94000000000005, 428.03999999999996, 424.6400000000001, 475.98, 461.02, 487.8800000000001, 511.3399999999999, 421.24, 448.78, 541.26, 623.8800000000001, 623.1999999999998, 711.4299999999998, 782.3200000000002, 837.7399999999998], "borderColor": "rgba(54, 162, 235, 0.8)", "backgroundColor": "transparent", "tension": 0.1, "fill": false, "borderDash": [5, 5], "borderWidth": 2, "tickerName": "VHVE.L", "isProfit": true, "hidden": false, "order": 2, "quantities": [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0, 17.0]}];
 
         // Total portfolio value dataset
         const totalValueDataset = {
@@ -265,7 +283,9 @@
             tension: 0.1,
             fill: true,
             borderWidth: 3,
-            tickerName: 'total'
+            tickerName: 'total',
+            quantities: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 17.0, 17.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0],
+            profits: [37.42999999999995, 22.100000000000023, 22.940000000000055, 42.75, 51.22000000000003, 67.80999999999995, 95.38999999999999, 85.65999999999997, 57.940000000000055, 45.75999999999999, 291.27, 339.0799999999999, 322.6300000000001, 329.2800000000002, 272.44000000000005, 200.98000000000002, 498.53999999999996, 798.0, 816.3800000000001, 972.4399999999996, 976.4399999999996, 940.2399999999998, 1114.9799999999996, 1304.42, 1075.1800000000003, 1272.9399999999996, 944.54, 873.6799999999998, 838.1599999999999, 996.6800000000003, 941.6999999999998, 1313.13, 1633.3199999999997, 1822.2399999999998]
         };
 
         // Total portfolio profit dataset
@@ -281,7 +301,8 @@
             tickerName: 'total',
             isProfit: true,
             hidden: false,
-            order: 2
+            order: 2,
+            quantities: [7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 17.0, 17.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0, 27.0]
         };
 
         const chart = new Chart(ctx, {
@@ -327,7 +348,34 @@
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                                const dataset = context.dataset;
+                                const dataIndex = context.dataIndex;
+                                const value = context.parsed.y;
+                                const formattedValue = '$' + value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+                                let lines = [];
+
+                                if (dataset.isProfit) {
+                                    // Profit dataset - show profit and quantity
+                                    lines.push(dataset.label + ': ' + formattedValue);
+                                    if (dataset.quantities && dataset.quantities[dataIndex]) {
+                                        lines.push('  Shares: ' + dataset.quantities[dataIndex].toFixed(1));
+                                    }
+                                } else {
+                                    // Value dataset - show value, quantity, and profit
+                                    lines.push(dataset.label + ': ' + formattedValue);
+                                    if (dataset.quantities && dataset.quantities[dataIndex]) {
+                                        lines.push('  Shares: ' + dataset.quantities[dataIndex].toFixed(1));
+                                    }
+                                    if (dataset.profits && dataset.profits[dataIndex] !== undefined) {
+                                        const profit = dataset.profits[dataIndex];
+                                        const profitSign = profit >= 0 ? '+' : '';
+                                        const formattedProfit = '$' + profitSign + profit.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                                        lines.push('  Profit: ' + formattedProfit);
+                                    }
+                                }
+
+                                return lines;
                             }
                         }
                     },
@@ -357,6 +405,32 @@
         // Store all annotations
         const allAnnotations = [{"type": "line", "xMin": "2023-02-01", "xMax": "2023-02-01", "borderColor": "rgba(255, 99, 71, 0.5)", "borderWidth": 2, "borderDash": [5, 5], "ticker": "VHVE.L", "label": {"display": true, "content": "VHVE.L: +7", "position": "start", "backgroundColor": "rgba(255, 99, 71, 0.8)", "color": "white", "font": {"size": 10, "weight": "bold"}, "padding": 4, "rotation": 0}}, {"type": "line", "xMin": "2023-12-01", "xMax": "2023-12-01", "borderColor": "rgba(255, 99, 71, 0.5)", "borderWidth": 2, "borderDash": [5, 5], "ticker": "AAPL", "label": {"display": true, "content": "AAPL: +10", "position": "start", "backgroundColor": "rgba(255, 99, 71, 0.8)", "color": "white", "font": {"size": 10, "weight": "bold"}, "padding": 4, "rotation": 0}}, {"type": "line", "xMin": "2024-02-01", "xMax": "2024-02-01", "borderColor": "rgba(255, 99, 71, 0.5)", "borderWidth": 2, "borderDash": [5, 5], "ticker": "VHVE.L", "label": {"display": true, "content": "VHVE.L: +10", "position": "start", "backgroundColor": "rgba(255, 99, 71, 0.8)", "color": "white", "font": {"size": 10, "weight": "bold"}, "padding": 4, "rotation": 0}}];
 
+        // Store ticker statistics
+        const tickerStats = {"VHVE.L": {"current_value": 2264.74, "cost_basis": 1427.0, "profit": 837.7399999999998, "return_percent": 58.70637701471617}, "AAPL": {"current_value": 2685.5, "cost_basis": 1701.0, "profit": 984.5, "return_percent": 57.8777189888301}};
+        const totalStats = {
+            current_value: 4950.24,
+            cost_basis: 3128.0,
+            profit: 1822.2399999999998,
+            return_percent: 58.25575447570331
+        };
+
+        // Function to update stats display
+        function updateStats(label, stats) {
+            document.getElementById('statsLabel').textContent = label;
+            document.getElementById('statCurrentValue').textContent = '$' + stats.current_value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            document.getElementById('statTotalCost').textContent = '$' + stats.cost_basis.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+            const profitElement = document.getElementById('statProfit');
+            const profitSign = stats.profit >= 0 ? '+' : '';
+            profitElement.textContent = '$' + profitSign + stats.profit.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            profitElement.className = 'stat-value ' + (stats.profit >= 0 ? 'positive' : 'negative');
+
+            const returnElement = document.getElementById('statReturn');
+            const returnSign = stats.return_percent >= 0 ? '+' : '';
+            returnElement.textContent = returnSign + stats.return_percent.toFixed(2) + '%';
+            returnElement.className = 'stat-value ' + (stats.return_percent >= 0 ? 'positive' : 'negative');
+        }
+
         // Dropdown filter functionality
         document.getElementById('tickerFilter').addEventListener('change', function(e) {
             const selectedTicker = e.target.value;
@@ -366,11 +440,15 @@
                 chart.data.datasets = [...tickerValueDatasets, ...tickerProfitDatasets, totalValueDataset, totalProfitDataset];
                 // Show all annotations
                 chart.options.plugins.annotation.annotations = allAnnotations;
+                // Update stats to show total portfolio
+                updateStats('All Tickers', totalStats);
             } else if (selectedTicker === 'total') {
                 // Show only total portfolio value and profit
                 chart.data.datasets = [totalValueDataset, totalProfitDataset];
                 // Show all annotations for total view
                 chart.options.plugins.annotation.annotations = allAnnotations;
+                // Update stats to show total portfolio
+                updateStats('Total Portfolio Only', totalStats);
             } else {
                 // Show only the selected ticker's value and profit
                 const tickerValueDs = tickerValueDatasets.filter(ds => ds.tickerName === selectedTicker);
@@ -378,6 +456,8 @@
                 chart.data.datasets = [...tickerValueDs, ...tickerProfitDs];
                 // Show only annotations for selected ticker
                 chart.options.plugins.annotation.annotations = allAnnotations.filter(ann => ann.ticker === selectedTicker);
+                // Update stats to show selected ticker
+                updateStats(selectedTicker, tickerStats[selectedTicker]);
             }
 
             chart.update();
