@@ -29,7 +29,7 @@ def calculate_cost_basis(transactions, exchange_rates):
     cost_basis_eur = {}
     cost_basis_pln = {}
 
-    # Load exchange rates for conversion
+    # Load exchange rates for conversion (monthly rates for display currencies)
     rates = {}
     try:
         with open('exchange_rates.csv', 'r') as f:
@@ -44,13 +44,17 @@ def calculate_cost_basis(transactions, exchange_rates):
     except:
         pass
 
+    # Get the first available date for fallback conversions
+    first_rate_date = min(rates.keys()) if rates else None
+
     for transaction in transactions:
         ticker = transaction['ticker']
+        ticker_currency = transaction.get('ticker_currency', 'USD')
         local_currency = transaction.get('local_currency', 'PLN')
-        purchase_date = transaction['purchase_date']
         price_in_local = transaction['price_in_local_currency']
         quantity = transaction['quantity']
         fees_in_local = transaction['fee_in_local_currency']
+        exchange_rate = transaction['exchange_rate']  # This is ticker_currency to local_currency
 
         if ticker not in cost_basis_usd:
             cost_basis_usd[ticker] = 0
@@ -58,20 +62,34 @@ def calculate_cost_basis(transactions, exchange_rates):
             cost_basis_pln[ticker] = 0
 
         # Cost in local currency (PLN)
-        total_cost_local = (quantity * price_in_local) + fees_in_local
+        total_cost_pln = (quantity * price_in_local) + fees_in_local
 
-        # Convert from local currency to all three display currencies
-        def convert(value, from_curr, to_curr, date):
-            if from_curr == to_curr:
+        # Convert to ticker currency using the provided exchange rate
+        total_cost_ticker = total_cost_pln / exchange_rate
+
+        # Now convert from ticker currency to all three display currencies
+        def convert_from_ticker(value, ticker_curr, to_curr):
+            if ticker_curr == to_curr:
                 return value
-            pair_key = f"{from_curr}_{to_curr}"
-            if date in rates and pair_key in rates[date]:
-                return value * rates[date][pair_key]
+            # Use first available monthly rate for ticker->display conversions
+            if first_rate_date:
+                pair_key = f"{ticker_curr}_{to_curr}"
+                if pair_key in rates[first_rate_date]:
+                    return value * rates[first_rate_date][pair_key]
             return value
 
-        cost_usd = convert(total_cost_local, local_currency, 'USD', purchase_date)
-        cost_eur = convert(total_cost_local, local_currency, 'EUR', purchase_date)
-        cost_pln = convert(total_cost_local, local_currency, 'PLN', purchase_date)
+        if ticker_currency == 'USD':
+            cost_usd = total_cost_ticker
+            cost_eur = convert_from_ticker(total_cost_ticker, 'USD', 'EUR')
+            cost_pln = total_cost_pln
+        elif ticker_currency == 'EUR':
+            cost_usd = convert_from_ticker(total_cost_ticker, 'EUR', 'USD')
+            cost_eur = total_cost_ticker
+            cost_pln = total_cost_pln
+        else:  # PLN
+            cost_usd = convert_from_ticker(total_cost_ticker, 'PLN', 'USD')
+            cost_eur = convert_from_ticker(total_cost_ticker, 'PLN', 'EUR')
+            cost_pln = total_cost_pln
 
         cost_basis_usd[ticker] += cost_usd
         cost_basis_eur[ticker] += cost_eur
@@ -85,7 +103,7 @@ def calculate_cost_basis_over_time(transactions, dates):
     from datetime import datetime
     import csv
 
-    # Load exchange rates
+    # Load exchange rates (monthly rates)
     rates = {}
     try:
         with open('exchange_rates.csv', 'r') as f:
@@ -99,6 +117,9 @@ def calculate_cost_basis_over_time(transactions, dates):
     except:
         pass
 
+    # Get the first available date for fallback conversions
+    first_rate_date = min(rates.keys()) if rates else None
+
     # Convert date strings to datetime for comparison
     date_objects = [datetime.strptime(d, '%Y-%m-%d') for d in dates]
 
@@ -110,12 +131,14 @@ def calculate_cost_basis_over_time(transactions, dates):
         cost_basis_timeline_eur[ticker] = []
         cost_basis_timeline_pln[ticker] = []
 
-    def convert(value, from_curr, to_curr, date):
-        if from_curr == to_curr:
+    def convert_from_ticker(value, ticker_curr, to_curr):
+        if ticker_curr == to_curr:
             return value
-        pair_key = f"{from_curr}_{to_curr}"
-        if date in rates and pair_key in rates[date]:
-            return value * rates[date][pair_key]
+        # Use first available monthly rate for ticker->display conversions
+        if first_rate_date:
+            pair_key = f"{ticker_curr}_{to_curr}"
+            if pair_key in rates[first_rate_date]:
+                return value * rates[first_rate_date][pair_key]
         return value
 
     # For each date, sum up all transactions that occurred before or on that date
@@ -128,17 +151,31 @@ def calculate_cost_basis_over_time(transactions, dates):
                 if transaction['ticker'] == ticker:
                     trans_date = datetime.strptime(transaction['purchase_date'], '%Y-%m-%d')
                     if trans_date <= date_obj:
-                        local_currency = transaction.get('local_currency', 'PLN')
+                        ticker_currency = transaction.get('ticker_currency', 'USD')
                         price_in_local = transaction['price_in_local_currency']
                         quantity = transaction['quantity']
                         fees_in_local = transaction['fee_in_local_currency']
-                        total_cost_local = (quantity * price_in_local) + fees_in_local
+                        exchange_rate = transaction['exchange_rate']
 
-                        # Convert from local currency to all three currencies using the transaction date
-                        purchase_date_str = transaction['purchase_date']
-                        total_cost_usd += convert(total_cost_local, local_currency, 'USD', purchase_date_str)
-                        total_cost_eur += convert(total_cost_local, local_currency, 'EUR', purchase_date_str)
-                        total_cost_pln += convert(total_cost_local, local_currency, 'PLN', purchase_date_str)
+                        # Cost in local currency (PLN)
+                        cost_pln = (quantity * price_in_local) + fees_in_local
+
+                        # Convert to ticker currency using the provided exchange rate
+                        cost_ticker = cost_pln / exchange_rate
+
+                        # Convert from ticker currency to all three display currencies
+                        if ticker_currency == 'USD':
+                            total_cost_usd += cost_ticker
+                            total_cost_eur += convert_from_ticker(cost_ticker, 'USD', 'EUR')
+                            total_cost_pln += cost_pln
+                        elif ticker_currency == 'EUR':
+                            total_cost_usd += convert_from_ticker(cost_ticker, 'EUR', 'USD')
+                            total_cost_eur += cost_ticker
+                            total_cost_pln += cost_pln
+                        else:  # PLN
+                            total_cost_usd += convert_from_ticker(cost_ticker, 'PLN', 'USD')
+                            total_cost_eur += convert_from_ticker(cost_ticker, 'PLN', 'EUR')
+                            total_cost_pln += cost_pln
 
             cost_basis_timeline_usd[ticker].append(total_cost_usd)
             cost_basis_timeline_eur[ticker].append(total_cost_eur)
