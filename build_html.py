@@ -22,43 +22,129 @@ def load_portfolio_data(input_file='portfolio_data.json'):
         exit(1)
 
 
-def calculate_cost_basis(transactions):
-    """Calculate total cost basis for each ticker."""
-    cost_basis = {}
+def calculate_cost_basis(transactions, exchange_rates):
+    """Calculate total cost basis for each ticker in all three currencies."""
+    import json
+    cost_basis_usd = {}
+    cost_basis_eur = {}
+    cost_basis_pln = {}
+
+    # Load exchange rates for conversion
+    rates = {}
+    try:
+        with open('exchange_rates.csv', 'r') as f:
+            import csv
+            reader = csv.DictReader(f)
+            for row in reader:
+                date = row['date']
+                rates[date] = {}
+                for key, val in row.items():
+                    if key != 'date' and val:
+                        rates[date][key] = float(val)
+    except:
+        pass
+
     for transaction in transactions:
         ticker = transaction['ticker']
-        total_cost = (transaction['quantity'] * transaction['purchase_price']) + transaction['transaction_fees']
+        local_currency = transaction.get('local_currency', 'PLN')
+        purchase_date = transaction['purchase_date']
+        price_in_local = transaction['price_in_local_currency']
+        quantity = transaction['quantity']
+        fees_in_local = transaction['fee_in_local_currency']
 
-        if ticker not in cost_basis:
-            cost_basis[ticker] = 0
-        cost_basis[ticker] += total_cost
+        if ticker not in cost_basis_usd:
+            cost_basis_usd[ticker] = 0
+            cost_basis_eur[ticker] = 0
+            cost_basis_pln[ticker] = 0
 
-    return cost_basis
+        # Cost in local currency (PLN)
+        total_cost_local = (quantity * price_in_local) + fees_in_local
+
+        # Convert from local currency to all three display currencies
+        def convert(value, from_curr, to_curr, date):
+            if from_curr == to_curr:
+                return value
+            pair_key = f"{from_curr}_{to_curr}"
+            if date in rates and pair_key in rates[date]:
+                return value * rates[date][pair_key]
+            return value
+
+        cost_usd = convert(total_cost_local, local_currency, 'USD', purchase_date)
+        cost_eur = convert(total_cost_local, local_currency, 'EUR', purchase_date)
+        cost_pln = convert(total_cost_local, local_currency, 'PLN', purchase_date)
+
+        cost_basis_usd[ticker] += cost_usd
+        cost_basis_eur[ticker] += cost_eur
+        cost_basis_pln[ticker] += cost_pln
+
+    return cost_basis_usd, cost_basis_eur, cost_basis_pln
 
 
 def calculate_cost_basis_over_time(transactions, dates):
-    """Calculate cost basis for each ticker at each date."""
+    """Calculate cost basis for each ticker at each date in all three currencies."""
     from datetime import datetime
+    import csv
+
+    # Load exchange rates
+    rates = {}
+    try:
+        with open('exchange_rates.csv', 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                date = row['date']
+                rates[date] = {}
+                for key, val in row.items():
+                    if key != 'date' and val:
+                        rates[date][key] = float(val)
+    except:
+        pass
 
     # Convert date strings to datetime for comparison
     date_objects = [datetime.strptime(d, '%Y-%m-%d') for d in dates]
 
-    cost_basis_timeline = {}
+    cost_basis_timeline_usd = {}
+    cost_basis_timeline_eur = {}
+    cost_basis_timeline_pln = {}
     for ticker in set(t['ticker'] for t in transactions):
-        cost_basis_timeline[ticker] = []
+        cost_basis_timeline_usd[ticker] = []
+        cost_basis_timeline_eur[ticker] = []
+        cost_basis_timeline_pln[ticker] = []
+
+    def convert(value, from_curr, to_curr, date):
+        if from_curr == to_curr:
+            return value
+        pair_key = f"{from_curr}_{to_curr}"
+        if date in rates and pair_key in rates[date]:
+            return value * rates[date][pair_key]
+        return value
 
     # For each date, sum up all transactions that occurred before or on that date
     for date, date_obj in zip(dates, date_objects):
-        for ticker in cost_basis_timeline.keys():
-            total_cost = 0
+        for ticker in cost_basis_timeline_usd.keys():
+            total_cost_usd = 0
+            total_cost_eur = 0
+            total_cost_pln = 0
             for transaction in transactions:
                 if transaction['ticker'] == ticker:
                     trans_date = datetime.strptime(transaction['purchase_date'], '%Y-%m-%d')
                     if trans_date <= date_obj:
-                        total_cost += (transaction['quantity'] * transaction['purchase_price']) + transaction['transaction_fees']
-            cost_basis_timeline[ticker].append(total_cost)
+                        local_currency = transaction.get('local_currency', 'PLN')
+                        price_in_local = transaction['price_in_local_currency']
+                        quantity = transaction['quantity']
+                        fees_in_local = transaction['fee_in_local_currency']
+                        total_cost_local = (quantity * price_in_local) + fees_in_local
 
-    return cost_basis_timeline
+                        # Convert from local currency to all three currencies using the transaction date
+                        purchase_date_str = transaction['purchase_date']
+                        total_cost_usd += convert(total_cost_local, local_currency, 'USD', purchase_date_str)
+                        total_cost_eur += convert(total_cost_local, local_currency, 'EUR', purchase_date_str)
+                        total_cost_pln += convert(total_cost_local, local_currency, 'PLN', purchase_date_str)
+
+            cost_basis_timeline_usd[ticker].append(total_cost_usd)
+            cost_basis_timeline_eur[ticker].append(total_cost_eur)
+            cost_basis_timeline_pln[ticker].append(total_cost_pln)
+
+    return cost_basis_timeline_usd, cost_basis_timeline_eur, cost_basis_timeline_pln
 
 
 def generate_html(data, output_file='portfolio.html'):
@@ -68,13 +154,15 @@ def generate_html(data, output_file='portfolio.html'):
     generated_at = data['generated_at']
 
     dates = [pv['date'] for pv in portfolio_values]
-    values = [pv['total_value'] for pv in portfolio_values]
+    values_usd = [pv.get('total_value_usd', 0) for pv in portfolio_values]
+    values_eur = [pv.get('total_value_eur', 0) for pv in portfolio_values]
+    values_pln = [pv.get('total_value_pln', 0) for pv in portfolio_values]
 
-    # Calculate cost basis for each ticker
-    cost_basis = calculate_cost_basis(transactions)
+    # Calculate cost basis for each ticker in all three currencies
+    cost_basis_usd, cost_basis_eur, cost_basis_pln = calculate_cost_basis(transactions, None)
 
     # Calculate cost basis over time for profit calculation
-    cost_basis_timeline = calculate_cost_basis_over_time(transactions, dates)
+    cost_basis_timeline_usd, cost_basis_timeline_eur, cost_basis_timeline_pln = calculate_cost_basis_over_time(transactions, dates)
 
     # Extract unique tickers and prepare per-ticker data
     all_tickers = set()
@@ -98,50 +186,77 @@ def generate_html(data, output_file='portfolio.html'):
         'rgb(99, 255, 132)',   # Green
     ]
 
-    # Build per-ticker datasets (both value and profit)
+    # Build per-ticker datasets (value and profit in all three currencies)
     ticker_datasets = []
     ticker_profit_datasets = []
     for idx, ticker in enumerate(unique_tickers):
-        ticker_values = []
-        ticker_profits = []
+        ticker_values_usd = []
+        ticker_values_eur = []
+        ticker_values_pln = []
+        ticker_profits_usd = []
+        ticker_profits_eur = []
+        ticker_profits_pln = []
         ticker_quantities = []
         for i, pv in enumerate(portfolio_values):
-            ticker_value = 0
+            ticker_value_usd = 0
+            ticker_value_eur = 0
+            ticker_value_pln = 0
             ticker_quantity = 0
             for holding in pv['holdings']:
                 if holding['ticker'] == ticker:
-                    ticker_value = holding['value']
+                    ticker_value_usd = holding.get('value_usd', 0)
+                    ticker_value_eur = holding.get('value_eur', 0)
+                    ticker_value_pln = holding.get('value_pln', 0)
                     ticker_quantity = holding['quantity']
                     break
-            ticker_values.append(ticker_value)
+            ticker_values_usd.append(ticker_value_usd)
+            ticker_values_eur.append(ticker_value_eur)
+            ticker_values_pln.append(ticker_value_pln)
             ticker_quantities.append(ticker_quantity)
 
-            # Calculate profit at this point in time
-            ticker_cost = cost_basis_timeline[ticker][i]
-            ticker_profit = ticker_value - ticker_cost
-            ticker_profits.append(ticker_profit)
+            # Calculate profit at this point in time (all three currencies)
+            ticker_cost_usd = cost_basis_timeline_usd[ticker][i]
+            ticker_profit_usd = ticker_value_usd - ticker_cost_usd
+            ticker_profits_usd.append(ticker_profit_usd)
+
+            ticker_cost_eur = cost_basis_timeline_eur[ticker][i]
+            ticker_profit_eur = ticker_value_eur - ticker_cost_eur
+            ticker_profits_eur.append(ticker_profit_eur)
+
+            ticker_cost_pln = cost_basis_timeline_pln[ticker][i]
+            ticker_profit_pln = ticker_value_pln - ticker_cost_pln
+            ticker_profits_pln.append(ticker_profit_pln)
 
         color = colors[idx % len(colors)]
         color_rgba = color.replace('rgb', 'rgba').replace(')', ', 0.2)')
 
-        # Value dataset
+        # Value dataset (default to PLN)
         ticker_datasets.append({
             'label': ticker,
-            'data': ticker_values,
+            'data': ticker_values_pln,
+            'dataUSD': ticker_values_usd,
+            'dataEUR': ticker_values_eur,
+            'dataPLN': ticker_values_pln,
             'borderColor': color,
             'backgroundColor': color_rgba,
             'tension': 0.1,
             'fill': True,
             'tickerName': ticker,
             'quantities': ticker_quantities,
-            'profits': ticker_profits
+            'profits': ticker_profits_pln,
+            'profitsUSD': ticker_profits_usd,
+            'profitsEUR': ticker_profits_eur,
+            'profitsPLN': ticker_profits_pln
         })
 
-        # Profit dataset (dashed line, same color but darker)
+        # Profit dataset (dashed line, same color but darker, default to PLN)
         darker_color = color.replace('rgb', 'rgba').replace(')', ', 0.8)')
         ticker_profit_datasets.append({
             'label': f'{ticker} Profit',
-            'data': ticker_profits,
+            'data': ticker_profits_pln,
+            'dataUSD': ticker_profits_usd,
+            'dataEUR': ticker_profits_eur,
+            'dataPLN': ticker_profits_pln,
             'borderColor': darker_color,
             'backgroundColor': 'transparent',
             'tension': 0.1,
@@ -155,14 +270,26 @@ def generate_html(data, output_file='portfolio.html'):
             'quantities': ticker_quantities
         })
 
-    # Calculate total profit over time and total quantities
-    total_profit_values = []
+    # Calculate total profit over time and total quantities (all three currencies)
+    total_profit_values_usd = []
+    total_profit_values_eur = []
+    total_profit_values_pln = []
     total_quantities = []
     for i, pv in enumerate(portfolio_values):
-        # Sum up all cost basis at this point in time
-        total_cost_at_date = sum(cost_basis_timeline[ticker][i] for ticker in unique_tickers)
-        total_profit_at_date = pv['total_value'] - total_cost_at_date
-        total_profit_values.append(total_profit_at_date)
+        # Sum up all cost basis at this point in time (USD)
+        total_cost_at_date_usd = sum(cost_basis_timeline_usd[ticker][i] for ticker in unique_tickers)
+        total_profit_at_date_usd = pv.get('total_value_usd', 0) - total_cost_at_date_usd
+        total_profit_values_usd.append(total_profit_at_date_usd)
+
+        # Sum up all cost basis at this point in time (EUR)
+        total_cost_at_date_eur = sum(cost_basis_timeline_eur[ticker][i] for ticker in unique_tickers)
+        total_profit_at_date_eur = pv.get('total_value_eur', 0) - total_cost_at_date_eur
+        total_profit_values_eur.append(total_profit_at_date_eur)
+
+        # Sum up all cost basis at this point in time (PLN)
+        total_cost_at_date_pln = sum(cost_basis_timeline_pln[ticker][i] for ticker in unique_tickers)
+        total_profit_at_date_pln = pv.get('total_value_pln', 0) - total_cost_at_date_pln
+        total_profit_values_pln.append(total_profit_at_date_pln)
 
         # Sum up all quantities at this point in time
         total_qty = sum(holding['quantity'] for holding in pv['holdings'])
@@ -211,33 +338,64 @@ def generate_html(data, output_file='portfolio.html'):
             }
         })
 
-    # Calculate statistics for total portfolio
-    current_value = values[-1] if values else 0
-    initial_value = values[0] if values else 0
-    total_change = current_value - initial_value
-    percent_change = ((total_change / initial_value * 100) if initial_value != 0 else 0)
+    # Calculate statistics for total portfolio (all three currencies)
+    current_value_usd = values_usd[-1] if values_usd else 0
+    current_value_eur = values_eur[-1] if values_eur else 0
+    current_value_pln = values_pln[-1] if values_pln else 0
 
-    # Calculate total cost basis and profit
-    total_cost_basis = sum(cost_basis.values())
-    total_profit = current_value - total_cost_basis
-    total_profit_percent = ((total_profit / total_cost_basis * 100) if total_cost_basis != 0 else 0)
+    # Calculate total cost basis and profit (USD)
+    total_cost_basis_usd = sum(cost_basis_usd.values())
+    total_profit_usd = current_value_usd - total_cost_basis_usd
+    total_profit_percent_usd = ((total_profit_usd / total_cost_basis_usd * 100) if total_cost_basis_usd != 0 else 0)
 
-    # Calculate per-ticker statistics
+    # Calculate total cost basis and profit (EUR)
+    total_cost_basis_eur = sum(cost_basis_eur.values())
+    total_profit_eur = current_value_eur - total_cost_basis_eur
+    total_profit_percent_eur = ((total_profit_eur / total_cost_basis_eur * 100) if total_cost_basis_eur != 0 else 0)
+
+    # Calculate total cost basis and profit (PLN)
+    total_cost_basis_pln = sum(cost_basis_pln.values())
+    total_profit_pln = current_value_pln - total_cost_basis_pln
+    total_profit_percent_pln = ((total_profit_pln / total_cost_basis_pln * 100) if total_cost_basis_pln != 0 else 0)
+
+    # Calculate per-ticker statistics (all three currencies)
     ticker_stats = {}
     if portfolio_values:
         current_holdings = portfolio_values[-1]['holdings']
         for holding in current_holdings:
             ticker = holding['ticker']
-            ticker_cost = cost_basis.get(ticker, 0)
-            ticker_value = holding['value']
-            ticker_profit = ticker_value - ticker_cost
-            ticker_return = ((ticker_profit / ticker_cost * 100) if ticker_cost != 0 else 0)
+
+            # USD
+            ticker_cost_usd = cost_basis_usd.get(ticker, 0)
+            ticker_value_usd = holding.get('value_usd', 0)
+            ticker_profit_usd = ticker_value_usd - ticker_cost_usd
+            ticker_return_usd = ((ticker_profit_usd / ticker_cost_usd * 100) if ticker_cost_usd != 0 else 0)
+
+            # EUR
+            ticker_cost_eur = cost_basis_eur.get(ticker, 0)
+            ticker_value_eur = holding.get('value_eur', 0)
+            ticker_profit_eur = ticker_value_eur - ticker_cost_eur
+            ticker_return_eur = ((ticker_profit_eur / ticker_cost_eur * 100) if ticker_cost_eur != 0 else 0)
+
+            # PLN
+            ticker_cost_pln = cost_basis_pln.get(ticker, 0)
+            ticker_value_pln = holding.get('value_pln', 0)
+            ticker_profit_pln = ticker_value_pln - ticker_cost_pln
+            ticker_return_pln = ((ticker_profit_pln / ticker_cost_pln * 100) if ticker_cost_pln != 0 else 0)
 
             ticker_stats[ticker] = {
-                'current_value': ticker_value,
-                'cost_basis': ticker_cost,
-                'profit': ticker_profit,
-                'return_percent': ticker_return
+                'current_value_usd': ticker_value_usd,
+                'cost_basis_usd': ticker_cost_usd,
+                'profit_usd': ticker_profit_usd,
+                'return_percent_usd': ticker_return_usd,
+                'current_value_eur': ticker_value_eur,
+                'cost_basis_eur': ticker_cost_eur,
+                'profit_eur': ticker_profit_eur,
+                'return_percent_eur': ticker_return_eur,
+                'current_value_pln': ticker_value_pln,
+                'cost_basis_pln': ticker_cost_pln,
+                'profit_pln': ticker_profit_pln,
+                'return_percent_pln': ticker_return_pln
             }
 
     html_content = f"""<!DOCTYPE html>
@@ -403,6 +561,12 @@ def generate_html(data, output_file='portfolio.html'):
 """
 
     html_content += f"""            </select>
+            <label class="filter-label" for="currencyFilter">Currency:</label>
+            <select id="currencyFilter" class="filter-dropdown">
+                <option value="PLN">PLN</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+            </select>
         </div>
 
         <div class="chart-container">
@@ -416,19 +580,19 @@ def generate_html(data, output_file='portfolio.html'):
         <div class="stats">
             <div class="stat-box">
                 <div class="stat-label">Current Value</div>
-                <div class="stat-value" id="statCurrentValue">${current_value:,.2f}</div>
+                <div class="stat-value" id="statCurrentValue">{current_value_pln:,.2f} PLN</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Total Cost</div>
-                <div class="stat-value" id="statTotalCost">${total_cost_basis:,.2f}</div>
+                <div class="stat-value" id="statTotalCost">{total_cost_basis_pln:,.2f} PLN</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Total Profit/Loss</div>
-                <div class="stat-value {'positive' if total_profit >= 0 else 'negative'}" id="statProfit">${total_profit:+,.2f}</div>
+                <div class="stat-value {'positive' if total_profit_pln >= 0 else 'negative'}" id="statProfit">{total_profit_pln:+,.2f} PLN</div>
             </div>
             <div class="stat-box">
                 <div class="stat-label">Return</div>
-                <div class="stat-value {'positive' if total_profit_percent >= 0 else 'negative'}" id="statReturn">{total_profit_percent:+.2f}%</div>
+                <div class="stat-value {'positive' if total_profit_percent_pln >= 0 else 'negative'}" id="statReturn">{total_profit_percent_pln:+.2f}%</div>
             </div>
         </div>
 
@@ -449,24 +613,26 @@ def generate_html(data, output_file='portfolio.html'):
                 <tbody>
 """
 
-    # Add current holdings to table
+    # Add current holdings to table (using PLN as default)
     if portfolio_values:
         current_holdings = portfolio_values[-1]['holdings']
         for holding in current_holdings:
             ticker = holding['ticker']
-            ticker_cost = cost_basis.get(ticker, 0)
-            ticker_profit = holding['value'] - ticker_cost
-            ticker_return = ((ticker_profit / ticker_cost * 100) if ticker_cost != 0 else 0)
-            profit_class = 'positive' if ticker_profit >= 0 else 'negative'
+            ticker_cost_pln = cost_basis_pln.get(ticker, 0)
+            ticker_value_pln = holding.get('value_pln', 0)
+            ticker_price_pln = holding.get('price_pln', 0)
+            ticker_profit_pln = ticker_value_pln - ticker_cost_pln
+            ticker_return_pln = ((ticker_profit_pln / ticker_cost_pln * 100) if ticker_cost_pln != 0 else 0)
+            profit_class = 'positive' if ticker_profit_pln >= 0 else 'negative'
 
             html_content += f"""                    <tr>
                         <td class="ticker">{ticker}</td>
                         <td>{holding['quantity']}</td>
-                        <td>${ticker_cost:,.2f}</td>
-                        <td>${holding['price']:,.2f}</td>
-                        <td>${holding['value']:,.2f}</td>
-                        <td class="{profit_class}">${ticker_profit:+,.2f}</td>
-                        <td class="{profit_class}">{ticker_return:+.2f}%</td>
+                        <td>{ticker_cost_pln:,.2f} PLN</td>
+                        <td>{ticker_price_pln:,.2f} PLN</td>
+                        <td>{ticker_value_pln:,.2f} PLN</td>
+                        <td class="{profit_class}">{ticker_profit_pln:+,.2f} PLN</td>
+                        <td class="{profit_class}">{ticker_return_pln:+.2f}%</td>
                     </tr>
 """
 
@@ -482,24 +648,65 @@ def generate_html(data, output_file='portfolio.html'):
                         <th>Ticker</th>
                         <th>Purchase Date</th>
                         <th>Quantity</th>
+                        <th>Currency</th>
                         <th>Purchase Price</th>
                         <th>Transaction Fees</th>
-                        <th>Total Cost</th>
+                        <th>Total Cost (Original)</th>
+                        <th>Total Cost (PLN)</th>
                     </tr>
                 </thead>
                 <tbody>
 """
 
+    # Load exchange rates for transaction cost conversion
+    import csv as csv_module
+    rates = {}
+    try:
+        with open('exchange_rates.csv', 'r') as f:
+            reader = csv_module.DictReader(f)
+            for row in reader:
+                date = row['date']
+                rates[date] = {}
+                for key, val in row.items():
+                    if key != 'date' and val:
+                        rates[date][key] = float(val)
+    except:
+        pass
+
+    def convert_to_pln(value, from_curr, date):
+        if from_curr == 'PLN':
+            return value
+        pair_key = f"{from_curr}_PLN"
+        if date in rates and pair_key in rates[date]:
+            return value * rates[date][pair_key]
+        return value
+
     # Add transactions to table
     for transaction in transactions:
-        total_cost = (transaction['quantity'] * transaction['purchase_price']) + transaction['transaction_fees']
+        ticker_currency = transaction.get('ticker_currency', 'USD')
+        local_currency = transaction.get('local_currency', 'PLN')
+        purchase_date = transaction['purchase_date']
+        quantity = transaction['quantity']
+        price_in_local = transaction['price_in_local_currency']
+        fee_in_local = transaction['fee_in_local_currency']
+        exchange_rate = transaction['exchange_rate']
+
+        # Calculate costs
+        total_cost_pln = (quantity * price_in_local) + fee_in_local
+        # Calculate price and fee in ticker currency using the exchange rate
+        price_in_ticker = price_in_local / exchange_rate
+        fee_in_ticker = fee_in_local / exchange_rate
+        total_cost_ticker = (quantity * price_in_ticker) + fee_in_ticker
+
         html_content += f"""                    <tr>
                         <td class="ticker">{transaction['ticker']}</td>
-                        <td>{transaction['purchase_date']}</td>
-                        <td>{transaction['quantity']}</td>
-                        <td>${transaction['purchase_price']:,.2f}</td>
-                        <td>${transaction['transaction_fees']:,.2f}</td>
-                        <td>${total_cost:,.2f}</td>
+                        <td>{purchase_date}</td>
+                        <td>{quantity}</td>
+                        <td><strong>{ticker_currency}</strong></td>
+                        <td>{price_in_ticker:,.2f} {ticker_currency}</td>
+                        <td>{fee_in_ticker:,.2f} {ticker_currency}</td>
+                        <td>{total_cost_ticker:,.2f} {ticker_currency}</td>
+                        <td>{total_cost_pln:,.2f} PLN</td>
                     </tr>
 """
 
@@ -511,6 +718,9 @@ def generate_html(data, output_file='portfolio.html'):
     <script>
         const ctx = document.getElementById('portfolioChart').getContext('2d');
 
+        // Currency settings (must be declared before chart creation)
+        let currentCurrency = 'PLN';
+
         // Ticker value datasets
         const tickerValueDatasets = {json.dumps(ticker_datasets)};
 
@@ -520,7 +730,10 @@ def generate_html(data, output_file='portfolio.html'):
         // Total portfolio value dataset
         const totalValueDataset = {{
             label: 'Total Portfolio',
-            data: {json.dumps(values)},
+            data: {json.dumps(values_pln)},
+            dataUSD: {json.dumps(values_usd)},
+            dataEUR: {json.dumps(values_eur)},
+            dataPLN: {json.dumps(values_pln)},
             borderColor: 'rgb(0, 0, 0)',
             backgroundColor: 'rgba(0, 0, 0, 0.1)',
             tension: 0.1,
@@ -528,13 +741,19 @@ def generate_html(data, output_file='portfolio.html'):
             borderWidth: 3,
             tickerName: 'total',
             quantities: {json.dumps(total_quantities)},
-            profits: {json.dumps(total_profit_values)}
+            profits: {json.dumps(total_profit_values_pln)},
+            profitsUSD: {json.dumps(total_profit_values_usd)},
+            profitsEUR: {json.dumps(total_profit_values_eur)},
+            profitsPLN: {json.dumps(total_profit_values_pln)}
         }};
 
         // Total portfolio profit dataset
         const totalProfitDataset = {{
             label: 'Total Portfolio Profit',
-            data: {json.dumps(total_profit_values)},
+            data: {json.dumps(total_profit_values_pln)},
+            dataUSD: {json.dumps(total_profit_values_usd)},
+            dataEUR: {json.dumps(total_profit_values_eur)},
+            dataPLN: {json.dumps(total_profit_values_pln)},
             borderColor: 'rgba(0, 0, 0, 0.8)',
             backgroundColor: 'transparent',
             tension: 0.1,
@@ -594,7 +813,8 @@ def generate_html(data, output_file='portfolio.html'):
                                 const dataset = context.dataset;
                                 const dataIndex = context.dataIndex;
                                 const value = context.parsed.y;
-                                const formattedValue = '$' + value.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+                                const currency = currentCurrency;
+                                const formattedValue = value.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',') + ' ' + currency;
 
                                 let lines = [];
 
@@ -613,7 +833,7 @@ def generate_html(data, output_file='portfolio.html'):
                                     if (dataset.profits && dataset.profits[dataIndex] !== undefined) {{
                                         const profit = dataset.profits[dataIndex];
                                         const profitSign = profit >= 0 ? '+' : '';
-                                        const formattedProfit = '$' + profitSign + profit.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+                                        const formattedProfit = profitSign + profit.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',') + ' ' + currency;
                                         lines.push('  Profit: ' + formattedProfit);
                                     }}
                                 }}
@@ -631,7 +851,8 @@ def generate_html(data, output_file='portfolio.html'):
                         beginAtZero: false,
                         ticks: {{
                             callback: function(value) {{
-                                return '$' + value.toFixed(0).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+                                const currency = currentCurrency;
+                                return value.toFixed(0).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',') + ' ' + currency;
                             }}
                         }}
                     }},
@@ -648,30 +869,73 @@ def generate_html(data, output_file='portfolio.html'):
         // Store all annotations
         const allAnnotations = {json.dumps(transaction_annotations)};
 
-        // Store ticker statistics
+        // Store ticker statistics (all three currencies)
         const tickerStats = {json.dumps(ticker_stats)};
         const totalStats = {{
-            current_value: {current_value},
-            cost_basis: {total_cost_basis},
-            profit: {total_profit},
-            return_percent: {total_profit_percent}
+            current_value_usd: {current_value_usd},
+            cost_basis_usd: {total_cost_basis_usd},
+            profit_usd: {total_profit_usd},
+            return_percent_usd: {total_profit_percent_usd},
+            current_value_eur: {current_value_eur},
+            cost_basis_eur: {total_cost_basis_eur},
+            profit_eur: {total_profit_eur},
+            return_percent_eur: {total_profit_percent_eur},
+            current_value_pln: {current_value_pln},
+            cost_basis_pln: {total_cost_basis_pln},
+            profit_pln: {total_profit_pln},
+            return_percent_pln: {total_profit_percent_pln}
         }};
 
         // Function to update stats display
         function updateStats(label, stats) {{
+            const currency = currentCurrency;
+            const suffix = ' ' + currency;
+
+            const currentValue = stats['current_value_' + currency.toLowerCase()];
+            const costBasis = stats['cost_basis_' + currency.toLowerCase()];
+            const profit = stats['profit_' + currency.toLowerCase()];
+            const returnPercent = stats['return_percent_' + currency.toLowerCase()];
+
             document.getElementById('statsLabel').textContent = label;
-            document.getElementById('statCurrentValue').textContent = '$' + stats.current_value.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
-            document.getElementById('statTotalCost').textContent = '$' + stats.cost_basis.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
+            document.getElementById('statCurrentValue').textContent = currentValue.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',') + suffix;
+            document.getElementById('statTotalCost').textContent = costBasis.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',') + suffix;
 
             const profitElement = document.getElementById('statProfit');
-            const profitSign = stats.profit >= 0 ? '+' : '';
-            profitElement.textContent = '$' + profitSign + stats.profit.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',');
-            profitElement.className = 'stat-value ' + (stats.profit >= 0 ? 'positive' : 'negative');
+            const profitSign = profit >= 0 ? '+' : '';
+            profitElement.textContent = profitSign + profit.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',') + suffix;
+            profitElement.className = 'stat-value ' + (profit >= 0 ? 'positive' : 'negative');
 
             const returnElement = document.getElementById('statReturn');
-            const returnSign = stats.return_percent >= 0 ? '+' : '';
-            returnElement.textContent = returnSign + stats.return_percent.toFixed(2) + '%';
-            returnElement.className = 'stat-value ' + (stats.return_percent >= 0 ? 'positive' : 'negative');
+            const returnSign = returnPercent >= 0 ? '+' : '';
+            returnElement.textContent = returnSign + returnPercent.toFixed(2) + '%';
+            returnElement.className = 'stat-value ' + (returnPercent >= 0 ? 'positive' : 'negative');
+        }}
+
+        // Function to switch dataset currency
+        function switchCurrency(currency) {{
+            currentCurrency = currency;
+            const dataKey = 'data' + currency;
+            const profitKey = 'profits' + currency;
+
+            // Update all datasets
+            chart.data.datasets.forEach(dataset => {{
+                if (dataset[dataKey]) {{
+                    dataset.data = dataset[dataKey];
+                }}
+                if (dataset[profitKey]) {{
+                    dataset.profits = dataset[profitKey];
+                }}
+            }});
+
+            chart.update();
+
+            // Update stats based on current filter
+            const selectedTicker = document.getElementById('tickerFilter').value;
+            if (selectedTicker === 'all' || selectedTicker === 'total') {{
+                updateStats(selectedTicker === 'all' ? 'All Tickers' : 'Total Portfolio Only', totalStats);
+            }} else {{
+                updateStats(selectedTicker, tickerStats[selectedTicker]);
+            }}
         }}
 
         // Dropdown filter functionality
@@ -705,6 +969,13 @@ def generate_html(data, output_file='portfolio.html'):
 
             chart.update();
         }});
+
+        // Currency filter functionality
+        document.getElementById('currencyFilter').addEventListener('change', function(e) {{
+            const selectedCurrency = e.target.value;
+            switchCurrency(selectedCurrency);
+        }});
+
     </script>
 </body>
 </html>

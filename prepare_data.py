@@ -8,6 +8,7 @@ refetching all prices from Yahoo.
 
 import csv
 import json
+import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
@@ -20,12 +21,19 @@ def parse_transactions(filename):
     with open(filename, 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
+            # Skip empty rows
+            if not row.get('ticker', '').strip():
+                continue
+
             transactions.append({
                 'ticker': row['ticker'].strip(),
                 'purchase_date': row['purchase_date'].strip(),
+                'ticker_currency': row.get('ticker_currency', '').strip(),
+                'local_currency': row.get('local_currency', '').strip(),
                 'quantity': float(row['quantity']),
-                'purchase_price': float(row['price']),
-                'transaction_fees': float(row['transaction_fees'])
+                'price_in_local_currency': float(row['price_in_local_currency']),
+                'fee_in_local_currency': float(row['fee_in_local_currency']),
+                'exchange_rate': float(row['exchange_rate'])
             })
 
     return transactions
@@ -48,6 +56,28 @@ def load_prices(filename):
                     prices[ticker][date] = float(row[ticker])
 
     return prices
+
+
+def load_exchange_rates(filename):
+    """Load exchange rates from exchange_rates.csv."""
+    rates = {}
+
+    if not os.path.exists(filename):
+        return rates
+
+    with open(filename, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            date = row['date']
+
+            # Iterate through all columns except 'date'
+            for pair_key in row.keys():
+                if pair_key != 'date' and row[pair_key]:
+                    if pair_key not in rates:
+                        rates[pair_key] = {}
+                    rates[pair_key][date] = float(row[pair_key])
+
+    return rates
 
 
 def get_earliest_date(transactions):
@@ -84,9 +114,33 @@ def get_holdings_at_date(transactions, target_date):
     return dict(holdings)
 
 
-def prepare_portfolio_data(transactions, prices, dates):
-    """Prepare portfolio data using transactions and pre-fetched prices."""
+def convert_value(value, from_currency, to_currency, exchange_rates, date_str):
+    """Convert a value from one currency to another using exchange rates."""
+    if from_currency == to_currency:
+        return value
+
+    pair_key = f"{from_currency}_{to_currency}"
+    if pair_key in exchange_rates and date_str in exchange_rates[pair_key]:
+        exchange_rate = exchange_rates[pair_key][date_str]
+        return value * exchange_rate
+    else:
+        print(f"  Warning: No exchange rate for {pair_key} on {date_str}")
+        return value
+
+
+def prepare_portfolio_data(transactions, prices, exchange_rates, dates):
+    """Prepare portfolio data using transactions, pre-fetched prices, and exchange rates."""
     portfolio_data = []
+
+    # Build a map of ticker -> currency info for quick lookup
+    ticker_currency_map = {}
+    for transaction in transactions:
+        ticker = transaction['ticker']
+        if ticker not in ticker_currency_map:
+            ticker_currency_map[ticker] = {
+                'ticker_currency': transaction['ticker_currency'],
+                'local_currency': transaction['local_currency']
+            }
 
     for date in dates:
         date_str = date.strftime('%Y-%m-%d')
@@ -95,7 +149,9 @@ def prepare_portfolio_data(transactions, prices, dates):
         date_data = {
             'date': date_str,
             'holdings': [],
-            'total_value': 0
+            'total_value_usd': 0,
+            'total_value_eur': 0,
+            'total_value_pln': 0
         }
 
         print(f"Processing {date_str}...")
@@ -104,22 +160,51 @@ def prepare_portfolio_data(transactions, prices, dates):
             # Look up price from prices.csv
             if ticker in prices and date_str in prices[ticker]:
                 price = prices[ticker][date_str]
-                value = quantity * price
+
+                # Get currency info for this ticker
+                currency_info = ticker_currency_map.get(ticker, {})
+                ticker_currency = currency_info.get('ticker_currency', 'USD')
+                local_currency = currency_info.get('local_currency', 'PLN')
+
+                # Calculate value in original currency
+                value_original = quantity * price
+
+                # Convert to all three display currencies
+                price_usd = convert_value(price, ticker_currency, 'USD', exchange_rates, date_str)
+                price_eur = convert_value(price, ticker_currency, 'EUR', exchange_rates, date_str)
+                price_pln = convert_value(price, ticker_currency, 'PLN', exchange_rates, date_str)
+
+                value_usd = quantity * price_usd
+                value_eur = quantity * price_eur
+                value_pln = quantity * price_pln
+
+                print(f"  {ticker}: {quantity} shares × {price:.2f} {ticker_currency} = {value_usd:.2f} USD, {value_eur:.2f} EUR, {value_pln:.2f} PLN")
 
                 date_data['holdings'].append({
                     'ticker': ticker,
                     'quantity': quantity,
-                    'price': round(price, 2),
-                    'value': round(value, 2)
+                    'price_original': round(price, 2),
+                    'value_original': round(value_original, 2),
+                    'price_usd': round(price_usd, 2),
+                    'value_usd': round(value_usd, 2),
+                    'price_eur': round(price_eur, 2),
+                    'value_eur': round(value_eur, 2),
+                    'price_pln': round(price_pln, 2),
+                    'value_pln': round(value_pln, 2),
+                    'ticker_currency': ticker_currency,
+                    'local_currency': local_currency
                 })
-                date_data['total_value'] += value
-                print(f"  {ticker}: {quantity} shares × ${price:.2f} = ${value:.2f}")
+                date_data['total_value_usd'] += value_usd
+                date_data['total_value_eur'] += value_eur
+                date_data['total_value_pln'] += value_pln
             else:
                 print(f"  Warning: No price found for {ticker} on {date_str}")
 
-        date_data['total_value'] = round(date_data['total_value'], 2)
+        date_data['total_value_usd'] = round(date_data['total_value_usd'], 2)
+        date_data['total_value_eur'] = round(date_data['total_value_eur'], 2)
+        date_data['total_value_pln'] = round(date_data['total_value_pln'], 2)
         portfolio_data.append(date_data)
-        print(f"  Total: ${date_data['total_value']:.2f}\n")
+        print(f"  Total: {date_data['total_value_usd']:.2f} USD, {date_data['total_value_eur']:.2f} EUR, {date_data['total_value_pln']:.2f} PLN\n")
 
     return portfolio_data
 
@@ -154,29 +239,38 @@ def main():
         print("Please run 'make fetch' first to fetch prices from Yahoo Finance.")
         exit(1)
 
+    # Load exchange rates
+    print("\n2. Loading exchange rates from exchange_rates.csv...")
+    exchange_rates = load_exchange_rates('exchange_rates.csv')
+    if exchange_rates:
+        total_rates = sum(len(dates) for dates in exchange_rates.values())
+        print(f"   Loaded {total_rates} exchange rate entries for {len(exchange_rates)} currency pairs")
+    else:
+        print("   No exchange rates found (all transactions in same currency)")
+
     # Parse transactions
-    print("\n2. Parsing transactions from my-tickers.csv...")
+    print("\n3. Parsing transactions from my-tickers.csv...")
     transactions = parse_transactions('my-tickers.csv')
     print(f"   Found {len(transactions)} transactions")
 
     # Get date range
-    print("\n3. Determining date range...")
+    print("\n4. Determining date range...")
     earliest_date = get_earliest_date(transactions)
     today = datetime.now()
     print(f"   Earliest purchase: {earliest_date.strftime('%Y-%m-%d')}")
     print(f"   Today: {today.strftime('%Y-%m-%d')}")
 
     # Generate month dates
-    print("\n4. Generating monthly dates...")
+    print("\n5. Generating monthly dates...")
     dates = generate_month_dates(earliest_date, today)
     print(f"   Generated {len(dates)} dates")
 
     # Prepare portfolio data
-    print("\n5. Preparing portfolio data...")
-    portfolio_data = prepare_portfolio_data(transactions, prices, dates)
+    print("\n6. Preparing portfolio data...")
+    portfolio_data = prepare_portfolio_data(transactions, prices, exchange_rates, dates)
 
     # Save to JSON
-    print("\n6. Saving data to JSON file...")
+    print("\n7. Saving data to JSON file...")
     save_portfolio_data(transactions, portfolio_data)
 
     print("\n" + "=" * 50)

@@ -1,14 +1,16 @@
-.PHONY: help install fetch build open clean view-csv view-prices view-data test-ticker run
+.PHONY: help install fetch fetch-rates build open clean view-csv view-prices view-rates view-data test-ticker run
 
 help:
 	@echo "Available commands:"
 	@echo "  make install      - Install Python dependencies"
 	@echo "  make fetch        - [Step 1] Fetch prices from Yahoo and save to prices.csv"
+	@echo "  make fetch-rates  - Fetch exchange rates and save to exchange_rates.csv"
 	@echo "  make build        - [Step 2] Prepare portfolio_data.json and build portfolio.html"
-	@echo "  make run          - Run both steps and open portfolio in browser"
+	@echo "  make run          - Run all steps and open portfolio in browser"
 	@echo "  make open         - Open portfolio.html in browser"
 	@echo "  make view-csv     - Display contents of my-tickers.csv"
 	@echo "  make view-prices  - Display contents of prices.csv"
+	@echo "  make view-rates   - Display contents of exchange_rates.csv"
 	@echo "  make view-data    - Display portfolio_data.json"
 	@echo "  make test-ticker  - Test fetching price for a ticker symbol"
 	@echo "  make clean        - Remove generated files"
@@ -24,6 +26,11 @@ fetch:
 	python fetch_prices.py
 	@echo "✓ Prices fetched and saved to prices.csv"
 
+fetch-rates:
+	@echo "Fetching exchange rates..."
+	python fetch_exchange_rates.py
+	@echo "✓ Exchange rates fetched and saved to exchange_rates.csv"
+
 build:
 	@echo "[Step 2] Preparing portfolio data and building HTML..."
 	python prepare_data.py
@@ -34,7 +41,7 @@ open:
 	@echo "Opening portfolio.html..."
 	open portfolio.html
 
-run: fetch build open
+run: fetch fetch-rates build open
 
 view-csv:
 	@echo "Contents of my-tickers.csv:"
@@ -46,6 +53,14 @@ view-prices:
 		cat prices.csv; \
 	else \
 		echo "Error: prices.csv not found. Run 'make fetch' first."; \
+	fi
+
+view-rates:
+	@echo "Contents of exchange_rates.csv:"
+	@if [ -f exchange_rates.csv ]; then \
+		cat exchange_rates.csv; \
+	else \
+		echo "Error: exchange_rates.csv not found. Run 'make fetch-rates' first."; \
 	fi
 
 view-data:
@@ -67,5 +82,5 @@ test-ticker:
 
 clean:
 	@echo "Removing generated files..."
-	rm -f portfolio.html portfolio_data.json prices.csv
+	rm -f portfolio.html portfolio_data.json prices.csv exchange_rates.csv
 	@echo "✓ Cleaned"

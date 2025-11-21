@@ -1,3 +1,4 @@
-ticker,purchase_date,quantity,price,transaction_fees
-VHVE.L,2023-01-03,7,75,1
-AAPL,2023-11-03,10,170,1
+ticker,purchase_date,ticker_currency,local_currency,action,quantity,price_in_local_currency,fee_in_local_currency,exchange_rate,account
+VHVE.L,2023-01-03,USD,PLN,Buy,7,337.67,19,4.43654,A1
+EMIM.AS,2023-01-04,EUR,PLN,Buy,56,127.98863,20.79,4.687198,A2
+VHVE.L,2024-10-21,USD,PLN,Buy,32,442.26614,41.04,3.985816,A1
