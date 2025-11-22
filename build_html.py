@@ -470,7 +470,7 @@ def generate_html(data, output_file='portfolio.html'):
         }}
         .filter-container {{
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             margin-bottom: 20px;
             gap: 10px;
@@ -491,10 +491,47 @@ def generate_html(data, output_file='portfolio.html'):
         .filter-dropdown:hover {{
             border-color: #007bff;
         }}
+        .charts-grid {{
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }}
+        @media (max-width: 1024px) {{
+            .charts-grid {{
+                grid-template-columns: 1fr;
+            }}
+        }}
         .chart-container {{
             position: relative;
             height: 400px;
-            margin-bottom: 20px;
+        }}
+        .pie-chart-container {{
+            position: relative;
+            height: 400px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }}
+        .pie-chart-title {{
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }}
+        .pie-chart-date {{
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }}
+        .pie-chart-canvas-wrapper {{
+            flex: 1;
+            position: relative;
+            min-height: 0;
         }}
         .stats-header {{
             text-align: center;
@@ -606,8 +643,17 @@ def generate_html(data, output_file='portfolio.html'):
             </select>
         </div>
 
-        <div class="chart-container">
-            <canvas id="portfolioChart"></canvas>
+        <div class="charts-grid">
+            <div class="chart-container">
+                <canvas id="portfolioChart"></canvas>
+            </div>
+            <div class="pie-chart-container">
+                <div class="pie-chart-title">Portfolio Composition</div>
+                <div class="pie-chart-date" id="pieChartDate">Latest</div>
+                <div class="pie-chart-canvas-wrapper">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
         </div>
 
         <div class="stats-header">
@@ -1011,6 +1057,120 @@ def generate_html(data, output_file='portfolio.html'):
         document.getElementById('currencyFilter').addEventListener('change', function(e) {{
             const selectedCurrency = e.target.value;
             switchCurrency(selectedCurrency);
+            // Update pie chart with new currency
+            updatePieChart(currentDateIndex);
+        }});
+
+        // Pie chart setup
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        const portfolioData = {json.dumps(portfolio_values)};
+        let currentDateIndex = portfolioData.length - 1; // Start with latest date
+
+        // Color palette for pie chart
+        const pieColors = [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)',
+            'rgba(255, 206, 86, 0.8)',
+            'rgba(75, 192, 192, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+            'rgba(255, 159, 64, 0.8)',
+            'rgba(199, 199, 199, 0.8)',
+            'rgba(83, 102, 255, 0.8)',
+            'rgba(255, 99, 255, 0.8)',
+            'rgba(99, 255, 132, 0.8)'
+        ];
+
+        const pieChart = new Chart(pieCtx, {{
+            type: 'pie',
+            data: {{
+                labels: [],
+                datasets: [{{
+                    data: [],
+                    backgroundColor: pieColors,
+                    borderColor: 'white',
+                    borderWidth: 2
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {{
+                    legend: {{
+                        position: 'bottom',
+                        labels: {{
+                            padding: 10,
+                            font: {{
+                                size: 11
+                            }}
+                        }}
+                    }},
+                    tooltip: {{
+                        callbacks: {{
+                            label: function(context) {{
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                const currency = currentCurrency;
+                                return label + ': ' + value.toFixed(2).replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, ',') + ' ' + currency + ' (' + percentage + '%)';
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        }});
+
+        // Function to update pie chart for a specific date
+        function updatePieChart(dateIndex) {{
+            if (dateIndex < 0 || dateIndex >= portfolioData.length) return;
+
+            currentDateIndex = dateIndex;
+            const data = portfolioData[dateIndex];
+            const currency = currentCurrency.toLowerCase();
+
+            // Get holdings data for this date
+            const holdings = data.holdings || [];
+            const labels = [];
+            const values = [];
+
+            holdings.forEach(holding => {{
+                const valueKey = 'value_' + currency;
+                if (holding[valueKey] && holding[valueKey] > 0) {{
+                    labels.push(holding.ticker);
+                    values.push(holding[valueKey]);
+                }}
+            }});
+
+            // Update pie chart
+            pieChart.data.labels = labels;
+            pieChart.data.datasets[0].data = values;
+            pieChart.update();
+
+            // Update date label
+            document.getElementById('pieChartDate').textContent = data.date;
+        }}
+
+        // Initialize pie chart with latest date
+        updatePieChart(currentDateIndex);
+
+        // Make x-axis labels clickable
+        chart.options.onClick = function(event, activeElements) {{
+            const points = chart.getElementsAtEventForMode(event, 'index', {{ intersect: false }}, false);
+
+            if (points.length > 0) {{
+                const dateIndex = points[0].index;
+                updatePieChart(dateIndex);
+            }}
+        }};
+
+        // Also make clicking on the chart canvas select the date
+        document.getElementById('portfolioChart').addEventListener('click', function(event) {{
+            const points = chart.getElementsAtEventForMode(event, 'index', {{ intersect: false }}, false);
+
+            if (points.length > 0) {{
+                const dateIndex = points[0].index;
+                updatePieChart(dateIndex);
+            }}
         }});
 
     </script>

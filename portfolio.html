@@ -33,7 +33,7 @@
         }
         .filter-container {
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             margin-bottom: 20px;
             gap: 10px;
@@ -54,10 +54,47 @@
         .filter-dropdown:hover {
             border-color: #007bff;
         }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
         .chart-container {
             position: relative;
             height: 400px;
-            margin-bottom: 20px;
+        }
+        .pie-chart-container {
+            position: relative;
+            height: 400px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .pie-chart-title {
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .pie-chart-date {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        .pie-chart-canvas-wrapper {
+            flex: 1;
+            position: relative;
+            min-height: 0;
         }
         .stats-header {
             text-align: center;
@@ -165,8 +202,17 @@
             </select>
         </div>
 
-        <div class="chart-container">
-            <canvas id="portfolioChart"></canvas>
+        <div class="charts-grid">
+            <div class="chart-container">
+                <canvas id="portfolioChart"></canvas>
+            </div>
+            <div class="pie-chart-container">
+                <div class="pie-chart-title">Portfolio Composition</div>
+                <div class="pie-chart-date" id="pieChartDate">Latest</div>
+                <div class="pie-chart-canvas-wrapper">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
         </div>
 
         <div class="stats-header">
@@ -668,6 +714,120 @@
         document.getElementById('currencyFilter').addEventListener('change', function(e) {
             const selectedCurrency = e.target.value;
             switchCurrency(selectedCurrency);
+            // Update pie chart with new currency
+            updatePieChart(currentDateIndex);
+        });
+
+        // Pie chart setup
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        const portfolioData = [{"date": "2023-02-01", "holdings": [{"ticker": "VHVE.L", "quantity": 87.0, "price_original": 80.49, "value_original": 7002.63, "price_usd": 80.49, "value_usd": 7002.63, "price_eur": 74.11, "value_eur": 6447.32, "price_pln": 348.88, "value_pln": 30352.2, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 28.54, "value_original": 2311.74, "price_usd": 31.0, "value_usd": 2510.78, "price_eur": 28.54, "value_eur": 2311.74, "price_pln": 134.35, "value_pln": 10882.52, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 9513.41, "total_value_eur": 8759.06, "total_value_pln": 41234.72}, {"date": "2023-03-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 78.3, "value_original": 11431.8, "price_usd": 78.3, "value_usd": 11431.8, "price_eur": 74.02, "value_eur": 10807.62, "price_pln": 348.28, "value_pln": 50848.65, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 27.58, "value_original": 2233.98, "price_usd": 29.17, "value_usd": 2362.88, "price_eur": 27.58, "value_eur": 2233.98, "price_pln": 129.75, "value_pln": 10509.98, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 13794.68, "total_value_eur": 13041.6, "total_value_pln": 61358.63}, {"date": "2023-04-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 78.42, "value_original": 11449.32, "price_usd": 78.42, "value_usd": 11449.32, "price_eur": 72.76, "value_eur": 10622.68, "price_pln": 340.87, "value_pln": 49766.76, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 26.85, "value_original": 2174.85, "price_usd": 28.94, "value_usd": 2344.05, "price_eur": 26.85, "value_eur": 2174.85, "price_pln": 125.74, "value_pln": 10185.04, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 13793.37, "total_value_eur": 12797.53, "total_value_pln": 59951.8}, {"date": "2023-05-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 81.25, "value_original": 11862.5, "price_usd": 81.25, "value_usd": 11862.5, "price_eur": 73.79, "value_eur": 10773.52, "price_pln": 338.66, "value_pln": 49444.09, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 26.39, "value_original": 2137.59, "price_usd": 29.06, "value_usd": 2353.7, "price_eur": 26.39, "value_eur": 2137.59, "price_pln": 121.1, "value_pln": 9809.19, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 14216.2, "total_value_eur": 12911.11, "total_value_pln": 59253.27}, {"date": "2023-06-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 82.46, "value_original": 12039.16, "price_usd": 82.46, "value_usd": 12039.16, "price_eur": 77.1, "value_eur": 11256.61, "price_pln": 348.99, "value_pln": 50952.13, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 27.26, "value_original": 2208.06, "price_usd": 29.15, "value_usd": 2361.52, "price_eur": 27.26, "value_eur": 2208.06, "price_pln": 123.37, "value_pln": 9992.8, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 14400.68, "total_value_eur": 13464.67, "total_value_pln": 60944.93}, {"date": "2023-07-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 84.83, "value_original": 12385.18, "price_usd": 84.83, "value_usd": 12385.18, "price_eur": 77.78, "value_eur": 11355.97, "price_pln": 345.18, "value_pln": 50396.54, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 27.58, "value_original": 2233.98, "price_usd": 30.08, "value_usd": 2436.6, "price_eur": 27.58, "value_eur": 2233.98, "price_pln": 122.4, "value_pln": 9914.18, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 14821.78, "total_value_eur": 13589.95, "total_value_pln": 60310.72}, {"date": "2023-08-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 88.77, "value_original": 12960.42, "price_usd": 88.77, "value_usd": 12960.42, "price_eur": 80.72, "value_eur": 11784.91, "price_pln": 355.2, "value_pln": 51858.53, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 29.01, "value_original": 2349.81, "price_usd": 31.91, "value_usd": 2584.32, "price_eur": 29.01, "value_eur": 2349.81, "price_pln": 127.66, "value_pln": 10340.1, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 15544.74, "total_value_eur": 14134.72, "total_value_pln": 62198.63}, {"date": "2023-09-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 87.38, "value_original": 12757.48, "price_usd": 87.38, "value_usd": 12757.48, "price_eur": 80.58, "value_eur": 11764.95, "price_pln": 360.25, "value_pln": 52596.54, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 28.29, "value_original": 2291.49, "price_usd": 30.68, "value_usd": 2484.89, "price_eur": 28.29, "value_eur": 2291.49, "price_pln": 126.48, "value_pln": 10244.56, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 15242.37, "total_value_eur": 14056.44, "total_value_pln": 62841.1}, {"date": "2023-10-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 83.42, "value_original": 12179.32, "price_usd": 83.42, "value_usd": 12179.32, "price_eur": 78.76, "value_eur": 11498.5, "price_pln": 362.84, "value_pln": 52973.95, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 27.68, "value_original": 2242.08, "price_usd": 29.32, "value_usd": 2374.81, "price_eur": 27.68, "value_eur": 2242.08, "price_pln": 127.51, "value_pln": 10328.59, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 14554.13, "total_value_eur": 13740.58, "total_value_pln": 63302.54}, {"date": "2023-11-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 81.68, "value_original": 11925.28, "price_usd": 81.68, "value_usd": 11925.28, "price_eur": 77.21, "value_eur": 11272.97, "price_pln": 343.74, "value_pln": 50186.35, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 26.97, "value_original": 2184.57, "price_usd": 28.53, "value_usd": 2311.06, "price_eur": 26.97, "value_eur": 2184.57, "price_pln": 120.08, "value_pln": 9726.36, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 14236.34, "total_value_eur": 13457.54, "total_value_pln": 59912.71}, {"date": "2023-12-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 89.11, "value_original": 13010.06, "price_usd": 89.11, "value_usd": 13010.06, "price_eur": 81.81, "value_eur": 11944.54, "price_pln": 355.92, "value_pln": 51964.78, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 28.19, "value_original": 2283.39, "price_usd": 30.7, "value_usd": 2487.07, "price_eur": 28.19, "value_eur": 2283.39, "price_pln": 122.64, "value_pln": 9933.66, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 15497.13, "total_value_eur": 14227.93, "total_value_pln": 61898.44}, {"date": "2024-01-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 93.24, "value_original": 13613.04, "price_usd": 93.24, "value_usd": 13613.04, "price_eur": 84.34, "value_eur": 12312.99, "price_pln": 366.02, "value_pln": 53439.35, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 28.34, "value_original": 2295.54, "price_usd": 31.33, "value_usd": 2537.95, "price_eur": 28.34, "value_eur": 2295.54, "price_pln": 122.99, "value_pln": 9962.41, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 16150.99, "total_value_eur": 14608.53, "total_value_pln": 63401.76}, {"date": "2024-02-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 94.09, "value_original": 13737.14, "price_usd": 94.09, "value_usd": 13737.14, "price_eur": 87.09, "value_eur": 12715.1, "price_pln": 376.76, "value_pln": 55007.63, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 28.34, "value_original": 2295.54, "price_usd": 30.62, "value_usd": 2480.1, "price_eur": 28.34, "value_eur": 2295.54, "price_pln": 122.6, "value_pln": 9930.28, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 16217.24, "total_value_eur": 15010.64, "total_value_pln": 64937.91}, {"date": "2024-03-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 98.54, "value_original": 14386.84, "price_usd": 98.54, "value_usd": 14386.84, "price_eur": 91.2, "value_eur": 13315.02, "price_pln": 393.21, "value_pln": 57409.25, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 29.64, "value_original": 2400.84, "price_usd": 32.03, "value_usd": 2594.11, "price_eur": 29.64, "value_eur": 2400.84, "price_pln": 127.85, "value_pln": 10355.54, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 16980.95, "total_value_eur": 15715.86, "total_value_pln": 67764.79}, {"date": "2024-04-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 100.82, "value_original": 14719.72, "price_usd": 100.82, "value_usd": 14719.72, "price_eur": 93.41, "value_eur": 13637.82, "price_pln": 401.53, "value_pln": 58622.76, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 29.95, "value_original": 2425.95, "price_usd": 32.33, "value_usd": 2618.33, "price_eur": 29.95, "value_eur": 2425.95, "price_pln": 128.73, "value_pln": 10427.46, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 17338.05, "total_value_eur": 16063.77, "total_value_pln": 69050.22}, {"date": "2024-05-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 97.04, "value_original": 14167.84, "price_usd": 97.04, "value_usd": 14167.84, "price_eur": 90.98, "value_eur": 13282.35, "price_pln": 393.94, "value_pln": 57515.76, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 30.54, "value_original": 2473.74, "price_usd": 32.58, "value_usd": 2638.74, "price_eur": 30.54, "value_eur": 2473.74, "price_pln": 132.24, "value_pln": 10711.79, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 16806.58, "total_value_eur": 15756.09, "total_value_pln": 68227.55}, {"date": "2024-06-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 102.32, "value_original": 14938.72, "price_usd": 102.32, "value_usd": 14938.72, "price_eur": 94.33, "value_eur": 13772.01, "price_pln": 401.21, "value_pln": 58576.21, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 31.55, "value_original": 2555.55, "price_usd": 34.23, "value_usd": 2772.26, "price_eur": 31.55, "value_eur": 2555.55, "price_pln": 134.19, "value_pln": 10869.78, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 17710.98, "total_value_eur": 16327.56, "total_value_pln": 69445.99}, {"date": "2024-07-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 104.3, "value_original": 15227.8, "price_usd": 104.3, "value_usd": 15227.8, "price_eur": 97.16, "value_eur": 14184.7, "price_pln": 418.94, "value_pln": 61165.5, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 31.95, "value_original": 2587.95, "price_usd": 34.3, "value_usd": 2778.16, "price_eur": 31.95, "value_eur": 2587.95, "price_pln": 137.77, "value_pln": 11159.5, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 18005.96, "total_value_eur": 16772.65, "total_value_pln": 72325.0}, {"date": "2024-08-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 104.44, "value_original": 15248.24, "price_usd": 104.44, "value_usd": 15248.24, "price_eur": 96.49, "value_eur": 14087.85, "price_pln": 413.75, "value_pln": 60407.43, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 31.69, "value_original": 2566.89, "price_usd": 34.3, "value_usd": 2778.4, "price_eur": 31.69, "value_eur": 2566.89, "price_pln": 135.9, "value_pln": 11007.59, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 18026.64, "total_value_eur": 16654.74, "total_value_pln": 71415.02}, {"date": "2024-09-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 107.82, "value_original": 15741.72, "price_usd": 107.82, "value_usd": 15741.72, "price_eur": 96.57, "value_eur": 14099.86, "price_pln": 413.37, "value_pln": 60352.18, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 31.31, "value_original": 2536.11, "price_usd": 34.96, "value_usd": 2831.57, "price_eur": 31.31, "value_eur": 2536.11, "price_pln": 134.02, "value_pln": 10855.57, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 18573.29, "total_value_eur": 16635.97, "total_value_pln": 71207.75}, {"date": "2024-10-01", "holdings": [{"ticker": "VHVE.L", "quantity": 146.0, "price_original": 109.12, "value_original": 15931.52, "price_usd": 109.12, "value_usd": 15931.52, "price_eur": 97.98, "value_eur": 14304.91, "price_pln": 419.32, "value_pln": 61220.05, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 33.22, "value_original": 2690.82, "price_usd": 37.0, "value_usd": 2996.77, "price_eur": 33.22, "value_eur": 2690.82, "price_pln": 142.15, "value_pln": 11513.75, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 18928.29, "total_value_eur": 16995.73, "total_value_pln": 72733.8}, {"date": "2024-11-01", "holdings": [{"ticker": "VHVE.L", "quantity": 178.0, "price_original": 108.92, "value_original": 19387.76, "price_usd": 108.92, "value_usd": 19387.76, "price_eur": 100.05, "value_eur": 17809.6, "price_pln": 435.45, "value_pln": 77510.33, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 32.87, "value_original": 2662.47, "price_usd": 35.78, "value_usd": 2898.36, "price_eur": 32.87, "value_eur": 2662.47, "price_pln": 143.02, "value_pln": 11584.67, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 22286.12, "total_value_eur": 20472.07, "total_value_pln": 89095.0}, {"date": "2024-12-01", "holdings": [{"ticker": "VHVE.L", "quantity": 213.0, "price_original": 111.94, "value_original": 23843.22, "price_usd": 111.94, "value_usd": 23843.22, "price_eur": 107.18, "value_eur": 22829.88, "price_pln": 461.73, "value_pln": 98348.51, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 32.91, "value_original": 2665.71, "price_usd": 34.37, "value_usd": 2784.07, "price_eur": 32.91, "value_eur": 2665.71, "price_pln": 141.81, "value_pln": 11486.28, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 26627.29, "total_value_eur": 25495.59, "total_value_pln": 109834.79}, {"date": "2025-01-01", "holdings": [{"ticker": "VHVE.L", "quantity": 229.0, "price_original": 111.06, "value_original": 25432.74, "price_usd": 111.06, "value_usd": 25432.74, "price_eur": 106.55, "value_eur": 24400.17, "price_pln": 454.07, "value_pln": 103981.76, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 32.95, "value_original": 2668.95, "price_usd": 34.34, "value_usd": 2781.85, "price_eur": 32.95, "value_eur": 2668.95, "price_pln": 140.45, "value_pln": 11376.67, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 28214.59, "total_value_eur": 27069.12, "total_value_pln": 115358.42}, {"date": "2025-02-01", "holdings": [{"ticker": "VHVE.L", "quantity": 229.0, "price_original": 112.64, "value_original": 25794.56, "price_usd": 112.64, "value_usd": 25794.56, "price_eur": 107.6, "value_eur": 24641.54, "price_pln": 453.05, "value_pln": 103748.3, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 32.26, "value_original": 2613.06, "price_usd": 33.77, "value_usd": 2735.35, "price_eur": 32.26, "value_eur": 2613.06, "price_pln": 135.81, "value_pln": 11000.98, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 28529.91, "total_value_eur": 27254.6, "total_value_pln": 114749.28}, {"date": "2025-03-01", "holdings": [{"ticker": "VHVE.L", "quantity": 229.0, "price_original": 114.02, "value_original": 26110.58, "price_usd": 114.02, "value_usd": 26110.58, "price_eur": 108.85, "value_eur": 24927.77, "price_pln": 452.72, "value_pln": 103672.06, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 33.9, "value_original": 2745.9, "price_usd": 35.51, "value_usd": 2876.33, "price_eur": 33.9, "value_eur": 2745.9, "price_pln": 140.98, "value_pln": 11419.65, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 28986.91, "total_value_eur": 27673.67, "total_value_pln": 115091.71}, {"date": "2025-04-01", "holdings": [{"ticker": "VHVE.L", "quantity": 229.0, "price_original": 108.72, "value_original": 24896.88, "price_usd": 108.72, "value_usd": 24896.88, "price_eur": 100.49, "value_eur": 23012.19, "price_pln": 420.16, "value_pln": 96216.48, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 32.59, "value_original": 2639.79, "price_usd": 35.26, "value_usd": 2855.99, "price_eur": 32.59, "value_eur": 2639.79, "price_pln": 136.26, "value_pln": 11036.7, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 27752.87, "total_value_eur": 25651.98, "total_value_pln": 107253.18}, {"date": "2025-05-01", "holdings": [{"ticker": "VHVE.L", "quantity": 266.0, "price_original": 110.34, "value_original": 29350.44, "price_usd": 110.34, "value_usd": 29350.44, "price_eur": 97.43, "value_eur": 25916.44, "price_pln": 416.08, "value_pln": 110677.57, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 30.67, "value_original": 2484.27, "price_usd": 34.73, "value_usd": 2813.44, "price_eur": 30.67, "value_eur": 2484.27, "price_pln": 130.97, "value_pln": 10608.58, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 32163.88, "total_value_eur": 28400.71, "total_value_pln": 121286.15}, {"date": "2025-06-01", "holdings": [{"ticker": "VHVE.L", "quantity": 266.0, "price_original": 115.78, "value_original": 30797.48, "price_usd": 115.78, "value_usd": 30797.48, "price_eur": 101.67, "value_eur": 27043.27, "price_pln": 430.91, "value_pln": 114622.06, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 32.73, "value_original": 2651.13, "price_usd": 37.27, "value_usd": 3019.11, "price_eur": 32.73, "value_eur": 2651.13, "price_pln": 138.72, "value_pln": 11236.55, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 33816.59, "total_value_eur": 29694.4, "total_value_pln": 125858.61}, {"date": "2025-07-01", "holdings": [{"ticker": "VHVE.L", "quantity": 266.0, "price_original": 120.64, "value_original": 32090.24, "price_usd": 120.64, "value_usd": 32090.24, "price_eur": 102.35, "value_eur": 27225.36, "price_pln": 434.12, "value_pln": 115476.73, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 33.54, "value_original": 2716.74, "price_usd": 39.53, "value_usd": 3202.22, "price_eur": 33.54, "value_eur": 2716.74, "price_pln": 142.26, "value_pln": 11523.05, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 35292.46, "total_value_eur": 29942.1, "total_value_pln": 126999.78}, {"date": "2025-08-01", "holdings": [{"ticker": "VHVE.L", "quantity": 266.0, "price_original": 120.6, "value_original": 32079.6, "price_usd": 120.6, "value_usd": 32079.6, "price_eur": 105.57, "value_eur": 28082.48, "price_pln": 451.25, "value_pln": 120032.24, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 34.05, "value_original": 2758.05, "price_usd": 38.9, "value_usd": 3150.8, "price_eur": 34.05, "value_eur": 2758.05, "price_pln": 145.54, "value_pln": 11788.46, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 35230.4, "total_value_eur": 30840.53, "total_value_pln": 131820.7}, {"date": "2025-09-01", "holdings": [{"ticker": "VHVE.L", "quantity": 266.0, "price_original": 125.79, "value_original": 33460.14, "price_usd": 125.79, "value_usd": 33460.14, "price_eur": 107.59, "value_eur": 28618.46, "price_pln": 458.44, "value_pln": 121945.48, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 34.84, "value_original": 2822.04, "price_usd": 40.73, "value_usd": 3299.53, "price_eur": 34.84, "value_eur": 2822.04, "price_pln": 148.43, "value_pln": 12023.02, "ticker_currency": "EUR", "local_currency": "PLN"}], "total_value_usd": 36759.67, "total_value_eur": 31440.5, "total_value_pln": 133968.5}, {"date": "2025-10-01", "holdings": [{"ticker": "VHVE.L", "quantity": 293.0, "price_original": 129.96, "value_original": 38078.28, "price_usd": 129.96, "value_usd": 38078.28, "price_eur": 110.74, "value_eur": 32446.5, "price_pln": 472.16, "value_pln": 138342.2, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 37.15, "value_original": 3009.15, "price_usd": 43.6, "value_usd": 3531.54, "price_eur": 37.15, "value_eur": 3009.15, "price_pln": 158.39, "value_pln": 12829.81, "ticker_currency": "EUR", "local_currency": "PLN"}, {"ticker": "BRK-B", "quantity": 8.0, "price_original": 498.2, "value_original": 3985.6, "price_usd": 498.2, "value_usd": 3985.6, "price_eur": 424.52, "value_eur": 3396.13, "price_pln": 1810.01, "value_pln": 14480.08, "ticker_currency": "USD", "local_currency": "PLN"}], "total_value_usd": 45595.42, "total_value_eur": 38851.78, "total_value_pln": 165652.09}, {"date": "2025-11-01", "holdings": [{"ticker": "VHVE.L", "quantity": 293.0, "price_original": 133.22, "value_original": 39033.46, "price_usd": 133.22, "value_usd": 39033.46, "price_eur": 114.53, "value_eur": 33557.07, "price_pln": 485.56, "value_pln": 142269.16, "ticker_currency": "USD", "local_currency": "PLN"}, {"ticker": "EMIM.AS", "quantity": 81.0, "price_original": 38.79, "value_original": 3141.99, "price_usd": 45.12, "value_usd": 3654.76, "price_eur": 38.79, "value_eur": 3141.99, "price_pln": 164.45, "value_pln": 13320.15, "ticker_currency": "EUR", "local_currency": "PLN"}, {"ticker": "BRK-B", "quantity": 8.0, "price_original": 488.07, "value_original": 3904.56, "price_usd": 488.07, "value_usd": 3904.56, "price_eur": 419.59, "value_eur": 3356.75, "price_pln": 1778.92, "value_pln": 14231.34, "ticker_currency": "USD", "local_currency": "PLN"}], "total_value_usd": 46592.78, "total_value_eur": 40055.81, "total_value_pln": 169820.65}];
+        let currentDateIndex = portfolioData.length - 1; // Start with latest date
+
+        // Color palette for pie chart
+        const pieColors = [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)',
+            'rgba(255, 206, 86, 0.8)',
+            'rgba(75, 192, 192, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+            'rgba(255, 159, 64, 0.8)',
+            'rgba(199, 199, 199, 0.8)',
+            'rgba(83, 102, 255, 0.8)',
+            'rgba(255, 99, 255, 0.8)',
+            'rgba(99, 255, 132, 0.8)'
+        ];
+
+        const pieChart = new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: pieColors,
+                    borderColor: 'white',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 10,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                const currency = currentCurrency;
+                                return label + ': ' + value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' ' + currency + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Function to update pie chart for a specific date
+        function updatePieChart(dateIndex) {
+            if (dateIndex < 0 || dateIndex >= portfolioData.length) return;
+
+            currentDateIndex = dateIndex;
+            const data = portfolioData[dateIndex];
+            const currency = currentCurrency.toLowerCase();
+
+            // Get holdings data for this date
+            const holdings = data.holdings || [];
+            const labels = [];
+            const values = [];
+
+            holdings.forEach(holding => {
+                const valueKey = 'value_' + currency;
+                if (holding[valueKey] && holding[valueKey] > 0) {
+                    labels.push(holding.ticker);
+                    values.push(holding[valueKey]);
+                }
+            });
+
+            // Update pie chart
+            pieChart.data.labels = labels;
+            pieChart.data.datasets[0].data = values;
+            pieChart.update();
+
+            // Update date label
+            document.getElementById('pieChartDate').textContent = data.date;
+        }
+
+        // Initialize pie chart with latest date
+        updatePieChart(currentDateIndex);
+
+        // Make x-axis labels clickable
+        chart.options.onClick = function(event, activeElements) {
+            const points = chart.getElementsAtEventForMode(event, 'index', { intersect: false }, false);
+
+            if (points.length > 0) {
+                const dateIndex = points[0].index;
+                updatePieChart(dateIndex);
+            }
+        };
+
+        // Also make clicking on the chart canvas select the date
+        document.getElementById('portfolioChart').addEventListener('click', function(event) {
+            const points = chart.getElementsAtEventForMode(event, 'index', { intersect: false }, false);
+
+            if (points.length > 0) {
+                const dateIndex = points[0].index;
+                updatePieChart(dateIndex);
+            }
         });
 
     </script>
